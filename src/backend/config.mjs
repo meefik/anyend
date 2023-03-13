@@ -8,7 +8,10 @@ const config = {
   timeout: 10, // seconds
   response: 60, // seconds
   mongo: {
-    uri: 'mongodb://admin:secret@127.0.0.1:27017/fastfinder?authSource=admin'
+    uri: 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin'
+  },
+  minio: {
+    uri: 'http://minioadmin:minioadmin@127.0.0.1:9000/anyend'
   },
   ssl: {
     // key: '-----BEGIN RSA PRIVATE KEY-----\n...',
@@ -22,6 +25,9 @@ const config = {
   session: {
     key: 'secret',
     expires: 6 * 60 // minutes
+  },
+  cache: {
+    expires: 24 * 60 // minutes
   },
   http: {
     // port: 80,

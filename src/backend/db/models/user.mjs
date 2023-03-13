@@ -6,6 +6,13 @@ import jwt from 'jsonwebtoken';
 const Schema = mongoose.Schema;
 
 const UserSchema = new Schema({
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date
+  },
   username: {
     type: String,
     unique: true,
@@ -23,19 +30,13 @@ const UserSchema = new Schema({
     select: false
   },
   role: {
-    type: String,
-    default: 'user',
-    enum: ['user', 'admin']
+    type: String
   },
   nickname: {
     type: String
   },
   lang: {
     type: String
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   },
   loggedAt: {
     type: Date
@@ -78,6 +79,7 @@ UserSchema.set('toJSON', {
 
 UserSchema.pre('save', function (next) {
   if (!this.nickname) this.nickname = this.username;
+  this.updatedAt = new Date();
   next();
 });
 

@@ -59,9 +59,17 @@ function parseConf (val) {
   }
 };
 
-export default function () {
-  const app = express();
+export default async function () {
+  // Process termination
+  process.once('SIGTERM', shutdown);
+  // Ctrl+C
+  process.once('SIGINT', shutdown);
+  // Graceful shutdown for nodemon
+  process.once('SIGUSR2', shutdown);
+  // Connect to DB
+  await db.connect();
   // Create web server
+  const app = express();
   const protocol = nconf.get('ssl:key') && nconf.get('ssl:cert')
     ? 'https'
     : 'http';
@@ -207,12 +215,4 @@ export default function () {
       });
     });
   }
-  // Process termination
-  process.once('SIGTERM', shutdown);
-  // Ctrl+C
-  process.once('SIGINT', shutdown);
-  // Graceful shutdown for nodemon
-  process.once('SIGUSR2', shutdown);
-  // Connect to DB
-  db.connect();
 }

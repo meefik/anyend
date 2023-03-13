@@ -27,7 +27,13 @@ async function shutdown () {
   killAllWorkers();
 };
 
-export default function () {
+export default async function () {
+  // Process termination
+  process.once('SIGTERM', shutdown);
+  // Ctrl+C
+  process.once('SIGINT', shutdown);
+  // Graceful shutdown for nodemon
+  process.once('SIGUSR2', shutdown);
   // Create workers
   for (let i = 0; i < nconf.get('threads'); i++) {
     cluster.fork();
@@ -43,10 +49,4 @@ export default function () {
       cluster.workers[id].send(data);
     }
   });
-  // Process termination
-  process.once('SIGTERM', shutdown);
-  // Ctrl+C
-  process.once('SIGINT', shutdown);
-  // Graceful shutdown for nodemon
-  process.once('SIGUSR2', shutdown);
 }

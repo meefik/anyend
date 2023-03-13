@@ -1,19 +1,24 @@
 import mongoose from 'mongoose';
+import nconf from 'nconf';
 
 const Schema = mongoose.Schema;
 
 const CacheSchema = new Schema({
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
   updatedAt: {
     type: Date,
     default: Date.now,
-    expires: 24 * 60 * 60 // 1 day
+    expires: nconf.get('cache:expires')
   },
   key: {
     type: String,
     unique: true,
     require: true
   },
-  data: {
+  value: {
     type: Schema.Types.Mixed
   }
 }, {
@@ -38,8 +43,8 @@ CacheSchema.statics.readCache = async function (key, expires = 60) {
   return data;
 };
 
-CacheSchema.statics.writeCache = async function writeCache (key, data) {
-  await Cache.updateOne({ key }, { $set: { updatedAt: new Date(), key, data } }, { upsert: true });
+CacheSchema.statics.writeCache = async function writeCache (key, value) {
+  await Cache.updateOne({ key }, { $set: { updatedAt: new Date(), key, value } }, { upsert: true });
 };
 
 const Cache = mongoose.model('Cache', CacheSchema);
