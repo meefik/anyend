@@ -17,6 +17,10 @@ const ConfigSchema = new Schema({
   },
   value: {
     type: Schema.Types.Mixed
+  },
+  public: {
+    type: Boolean,
+    index: true
   }
 }, {
   strict: true,
@@ -32,6 +36,11 @@ ConfigSchema.set('toJSON', {
     delete ret[ConfigSchema.options.discriminatorKey];
     return ret;
   }
+});
+
+ConfigSchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
 });
 
 const Config = mongoose.model('Config', ConfigSchema);

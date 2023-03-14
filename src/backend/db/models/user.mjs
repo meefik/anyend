@@ -83,10 +83,6 @@ UserSchema.pre('save', function (next) {
   next();
 });
 
-UserSchema.methods.isActive = function () {
-  return !this.locked;
-};
-
 UserSchema.methods.randomPassword = function (length = 32) {
   return crypto.randomBytes(length).toString('base64');
 };
@@ -106,18 +102,15 @@ UserSchema.methods.validPassword = function (password) {
  * @param {*} payload JWT payload.
  * @returns {Object}
  */
-UserSchema.statics.getToken = function (payload = {}) {
+UserSchema.statics.getSessionToken = function (payload = {}) {
   const expires = parseInt(nconf.get('session:expires')) * 60;
   const id = payload.id || mongoose.Types.ObjectId();
-  const role = payload.role || 'user';
   const obj = {};
   for (const k in payload) {
     obj[k] = payload[k];
   }
   obj.exp = ~~(Date.now() / 1000) + expires;
   if (!obj.id) obj.id = id;
-  if (!obj.username) obj.username = id;
-  if (!obj.nickname) obj.nickname = role;
   obj.token = jwt.sign(obj, nconf.get('session:key'));
   return obj;
 };
@@ -138,19 +131,14 @@ UserSchema.statics.logIn = async function (data) {
     username: profile.username
   }).select('+hashedPassword +salt').exec();
   if (!user) return;
-  if (!user.isActive()) return;
+  if (user.locked) return;
   if (!user.validPassword(profile.password)) return;
   for (const k in profile) {
     if (typeof profile[k] === 'undefined' || k === 'password') continue;
     user[k] = profile[k];
   }
   await user.save();
-  return {
-    id: user.id,
-    username: user.username,
-    nickname: user.nickname,
-    role: user.role
-  };
+  return user;
 };
 
 const User = mongoose.model('User', UserSchema);

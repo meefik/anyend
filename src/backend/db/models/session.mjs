@@ -10,12 +10,16 @@ const SessionSchema = new Schema({
   },
   updatedAt: {
     type: Date,
-    default: Date.now,
     expires: nconf.get('session:expires')
+  },
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+    require: true
   },
   key: {
     type: String,
-    unique: true,
     require: true
   },
   value: {
@@ -36,6 +40,13 @@ SessionSchema.set('toJSON', {
     return ret;
   }
 });
+
+SessionSchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+// SessionSchema.index({ user: 1, key: 1 }, { unique: true });
 
 const Session = mongoose.model('Session', SessionSchema);
 

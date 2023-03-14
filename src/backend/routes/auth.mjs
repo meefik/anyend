@@ -4,6 +4,8 @@ import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import User from '../db/models/user.mjs';
+import Session from '../db/models/session.mjs';
+import Config from '../db/models/config.mjs';
 
 const router = express.Router();
 
@@ -31,7 +33,7 @@ passport.use(
         useragent: req.get('user-agent')
       });
       if (!user) return done(null, false);
-      done(null, user);
+      done(null, { id: user.id });
     } catch (err) {
       done(err, false);
     }
@@ -58,10 +60,22 @@ router.use(passport.initialize());
 
 // JWT authentication
 router.use(function (req, res, next) {
-  passport.authenticate('session', { session: false }, function (err, payload) {
+  passport.authenticate('session', { session: false }, async function (err, payload) {
     if (err || !payload) return next(err);
-    req.user = payload;
-    next();
+    try {
+      const user = await User.findById(payload.id);
+      req.user = user?.toJSON();
+      const sessionKeys = await Session.find({ user: payload.id }).lean();
+      const session = {};
+      for (let i = 0; i < sessionKeys.length; i++) {
+        const item = sessionKeys[i];
+        session[item.key] = item.value;
+      }
+      req.session = session;
+      next();
+    } catch (err) {
+      next(err);
+    }
   })(req, res, next);
 });
 
@@ -69,18 +83,32 @@ router.use(function (req, res, next) {
 router.post('/login',
   passport.authenticate('local', { session: false }),
   function (req, res) {
-    const { token } = User.getToken(req.user);
+    const { token } = User.getSessionToken({ id: req.user.id });
     res.json({ user: req.user, token });
   });
 
-// Get user data from session
+// Update session token
 router.get('/state', function (req, res, next) {
   if (!req.user) {
     res.status(401);
     next(new Error('Unauthorized'));
   } else {
-    const { token } = User.getToken(req.user);
+    const { token } = User.getSessionToken({ id: req.user.id });
     res.json({ user: req.user, token });
+  }
+});
+
+// Get public params
+router.get('/config', async function (req, res, next) {
+  try {
+    const config = {};
+    const params = await Config.find({ public: true }).lean();
+    for (let i = 0; i < params.length; i++) {
+      const param = params[i];
+      config[param.key] = param.value;
+    }
+  } catch (err) {
+    next(err);
   }
 });
 

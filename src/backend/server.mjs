@@ -13,16 +13,8 @@ process.on('uncaughtException', function (err) {
   });
 });
 
-try {
-  if (cluster.isPrimary) {
-    primary();
-  } else if (cluster.isWorker) {
-    worker();
-  }
-} catch (err) {
-  logger.log({
-    level: 'error',
-    label: 'server',
-    message: err.message
-  });
+if (cluster.isPrimary) {
+  primary();
+} else if (cluster.isWorker) {
+  worker();
 }

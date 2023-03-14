@@ -1,8 +1,7 @@
 import express from 'express';
 import authRouter from './auth.mjs';
-import usersRouter from './users.mjs';
-
-const router = express.Router();
+import Route from '../db/models/route.mjs';
+import Code from '../db/models/code.mjs';
 
 /**
  * Check the permissions for the role.
@@ -29,10 +28,24 @@ function isAuth (roles, req, res, next) {
   }
 }
 
-// Endpoint for authorization
-router.use('/', authRouter);
+export default async function () {
+  const router = express.Router();
 
-// Endpoint for user administration
-router.use('/users', isAuth(['admin']), usersRouter);
+  // Endpoint for authorization
+  router.use('/', authRouter);
 
-export default router;
+  // Create endpoints from code
+  const routes = await Route.find({});
+  const methods = { read: 'get', create: 'post', update: 'put', delete: 'delete' };
+  for (let i = 0; i < routes.length; i++) {
+    const { operator, roles, path, code } = routes[i];
+    const method = methods[operator];
+    const _code = await Code.findById(code);
+    const fn = _code?.createFunction();
+    if (method && path && roles && fn) {
+      router[method](path, isAuth(roles), fn);
+    }
+  }
+
+  return router;
+}

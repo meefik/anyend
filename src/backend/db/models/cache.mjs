@@ -10,7 +10,6 @@ const CacheSchema = new Schema({
   },
   updatedAt: {
     type: Date,
-    default: Date.now,
     expires: nconf.get('cache:expires')
   },
   key: {
@@ -35,6 +34,11 @@ CacheSchema.set('toJSON', {
     delete ret[CacheSchema.options.discriminatorKey];
     return ret;
   }
+});
+
+CacheSchema.pre('save', function (next) {
+  this.updatedAt = new Date();
+  next();
 });
 
 CacheSchema.statics.readCache = async function (key, expires = 60) {
