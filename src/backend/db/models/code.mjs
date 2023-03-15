@@ -10,6 +10,13 @@ const CodeSchema = new Schema({
   updatedAt: {
     type: Date
   },
+  enabled: {
+    type: Boolean
+  },
+  name: {
+    type: String,
+    unique: true
+  },
   args: {
     type: [String]
   },
@@ -40,12 +47,19 @@ CodeSchema.pre('save', function (next) {
   next();
 });
 
-CodeSchema.methods.createFunction = async function () {
-  if (!this.source) return;
-  const args = this.args || [];
-  const source = this.source;
-  // eslint-disable-next-line no-new-func
-  return new Function(...args, source);
+CodeSchema.statics.loadAll = async function () {
+  const items = await Code.find({ enabled: true });
+  const AsyncFunction = async function () {}.constructor;
+  for (let i = 0; i < items.length; i++) {
+    const { name, args = [], source } = items[i];
+    global.context = {};
+    if (name && source) {
+      // eslint-disable-next-line no-new-func
+      if (name in global.context === false) {
+        global[name] = new AsyncFunction(...args, source);
+      }
+    }
+  }
 };
 
 const Code = mongoose.model('Code', CodeSchema);

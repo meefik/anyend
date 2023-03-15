@@ -78,7 +78,6 @@ UserSchema.set('toJSON', {
 });
 
 UserSchema.pre('save', function (next) {
-  if (!this.nickname) this.nickname = this.username;
   this.updatedAt = new Date();
   next();
 });
@@ -141,6 +140,26 @@ UserSchema.statics.logIn = async function (data) {
   return user;
 };
 
+/**
+ * Create a default user with the admin role.
+ */
+UserSchema.statics.createDefaultUser = async function () {
+  const user = await User.findOne({ role: 'admin' }).select({ _id: 1 }).lean();
+  if (!user) {
+    // Add default admin user
+    const user = new User({
+      role: 'admin',
+      username: 'admin',
+      password: 'changeme'
+    });
+    await user.save();
+  }
+};
+
 const User = mongoose.model('User', UserSchema);
+
+User.on('index', async function (err) {
+  if (!err) await User.createDefaultUser();
+});
 
 export default User;

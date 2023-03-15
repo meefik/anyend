@@ -10,6 +10,7 @@ import cors from 'cors';
 import db from './db/index.mjs';
 import setupRoutes from './routes/index.mjs';
 import logger from './lib/logger.mjs';
+import lifecycle from './events/lifecycle.mjs';
 
 const PUBLIC_DIR = path.join(path.dirname(__filename), 'public');
 let server, httpServer;
@@ -145,7 +146,7 @@ export default async function () {
     });
     // Error handler
     app.use(function (err, req, res, next) {
-    // fallback to default node handler
+      // fallback to default node handler
       if (res.headersSent) {
         return next(err);
       }
@@ -157,7 +158,7 @@ export default async function () {
       if (typeof err !== 'object') {
         err = new Error(err);
       }
-      res.json({ name: err.name, message: err.message, code: err.code });
+      res.json({ name: err.name, message: err.message, code: res.statusCode });
     });
     // Run server
     server.once('close', function () {
@@ -219,6 +220,8 @@ export default async function () {
         });
       });
     }
+    // Lifecycle event
+    lifecycle.emit('started');
   } catch (err) {
     return shutdown();
   }

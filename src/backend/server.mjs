@@ -1,5 +1,5 @@
 import cluster from 'node:cluster';
-import './config.mjs';
+import './env.mjs';
 import primary from './primary.mjs';
 import worker from './worker.mjs';
 import logger from './lib/logger.mjs';

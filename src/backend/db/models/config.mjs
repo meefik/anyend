@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import nconf from 'nconf';
 
 const Schema = mongoose.Schema;
 
@@ -42,6 +43,14 @@ ConfigSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
+
+ConfigSchema.statics.loadAll = async function () {
+  const items = await Config.find({ public: { $ne: true } });
+  for (let i = 0; i < items.length; i++) {
+    const { key, value } = items[i];
+    nconf.set(key, value);
+  }
+};
 
 const Config = mongoose.model('Config', ConfigSchema);
 

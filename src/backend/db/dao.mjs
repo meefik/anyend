@@ -5,14 +5,15 @@ const dao = {
   /**
    * Создавить запись.
    *
-   * @param {string} query.model Имя модели БД.
-   * @param {Object} query.data Данные для внесения в БД.
+   * @param {string} model Имя модели БД.
    * @param {Object} [query.populate] Связь с другими моделями.
+   * @param {Object} data Данные для внесения в БД.
    * @returns {Promise}
    */
-  async create (query) {
-    const Model = mongoose.connection.models[query.model];
-    let { data, populate } = query;
+  async create (model, query, data) {
+    const Model = mongoose.connection.models[model];
+    if (!Model) throw new ModelError('Model not found');
+    let { populate } = query;
     if (data.id) {
       data._id = data.id;
       delete data.id;
@@ -30,7 +31,7 @@ const dao = {
   /**
    * Получить запись или список записей.
    *
-   * @param {string} query.model Имя модели БД.
+   * @param {string} model Имя модели БД.
    * @param {Object|string} [query.filter] Запрос в формате MongoDB.
    * @param {Object} [query.sort] Параметры сортировки.
    * @param {number} [query.skip] Пропустить N-записей.
@@ -42,8 +43,9 @@ const dao = {
    * @param {boolean} [query.cursor] Вернуть курсор.
    * @returns {Promise}
    */
-  async read (query) {
-    const Model = mongoose.connection.models[query.model];
+  async read (model, query) {
+    const Model = mongoose.connection.models[model];
+    if (!Model) throw new ModelError('Model not found');
     let {
       filter,
       select,
@@ -75,7 +77,8 @@ const dao = {
       transaction = Model.findOne(filter);
       if (select) transaction.select(select);
       if (populate) transaction.populate(populate);
-      return await transaction.exec();
+      const data = await transaction.exec();
+      return data;
     } else {
       transaction = Model.find(filter);
       if (sort) {
@@ -104,24 +107,26 @@ const dao = {
         }
       } else {
         if (cursor) return transaction.cursor();
-        return transaction.exec();
+        const data = await transaction.exec();
+        return data;
       }
     }
   },
   /**
    * Изменить запись.
    *
-   * @param {string} query.model Имя модели БД.
-   * @param {string} query.filter Запрос в формате MongoDB.
-   * @param {Object} query.data Данные для внесения в БД.
+   * @param {string} model Имя модели БД.
+   * @param {string} [query.filter] Запрос в формате MongoDB.
    * @param {boolean} [query.upsert] Добавить запись, если не существует.
    * @param {Object} [query.select] Включить или исключить поля документа.
    * @param {Object} [query.populate] Связь с другими моделями.
+   * @param {Object} data Данные для внесения в БД.
    * @returns {Promise}
    */
-  async update (query, callback) {
-    const Model = mongoose.connection.models[query.model];
-    let { filter, data, upsert, select, populate } = query;
+  async update (model, query, data) {
+    const Model = mongoose.connection.models[model];
+    if (!Model) throw new ModelError('Model not found');
+    let { filter, upsert, select, populate } = query;
     if (typeof filter === 'string') {
       filter = searchParser(filter);
     }
@@ -158,18 +163,20 @@ const dao = {
       }
       return doc;
     }
+    return doc;
   },
   /**
    * Удалить запись.
    *
-   * @param {string} query.model Имя модели БД.
-   * @param {string} query.filter Запрос в формате MongoDB.
+   * @param {string} model Имя модели БД.
+   * @param {string} [query.filter] Запрос в формате MongoDB.
    * @param {Object} [query.select] Включить или исключить поля документа.
    * @param {Object} [query.populate] Связь с другими моделями.
    * @returns {Promise}
    */
-  async delete (query, callback) {
-    const Model = mongoose.connection.models[query.model];
+  async delete (model, query) {
+    const Model = mongoose.connection.models[model];
+    if (!Model) throw new ModelError('Model not found');
     let { filter, select, populate } = query;
     if (typeof filter === 'string') {
       filter = searchParser(filter);
@@ -185,7 +192,7 @@ const dao = {
     if (select) transaction.select(select);
     if (populate) transaction.populate(populate);
     const doc = await transaction.exec();
-    await doc.remove();
+    await doc?.remove();
     return doc;
   }
 };
@@ -203,6 +210,14 @@ function setValue (path, val, doc) {
     }
     return o[k];
   }, doc);
+}
+
+class ModelError extends Error {
+  constructor (message) {
+    super(message);
+    this.message = message;
+    this.name = 'ModelError';
+  }
 }
 
 export default dao;
