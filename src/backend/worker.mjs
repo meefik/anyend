@@ -5,12 +5,16 @@ import https from 'node:https';
 import nconf from 'nconf';
 import express from 'express';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
 import compression from 'compression';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
+import passport from 'passport';
 import db from './db/index.mjs';
-import setupRoutes from './routes/index.mjs';
 import logger from './lib/logger.mjs';
 import lifecycle from './events/lifecycle.mjs';
+import setupRoutes from './routes/index.mjs';
 
 const PUBLIC_DIR = path.join(path.dirname(__filename), 'public');
 let server, httpServer;
@@ -24,6 +28,7 @@ async function shutdown () {
     setTimeout(() => process.exit(1), timeout * 1000);
   }
   try {
+    lifecycle.emit('shutdown');
     await db?.disconnect();
     await Promise.all([
       new Promise(resolve => server ? server.close(resolve) : resolve()),
@@ -116,17 +121,32 @@ export default async function () {
     app.use(express.urlencoded({ extended: true }));
     app.use(express.json());
     app.use(cors({ origin: true }));
+    app.use(cookieParser());
     // Response timeout
     app.use(function (req, res, next) {
       const timeout = nconf.get('http:timeout');
       if (timeout) req.setTimeout(timeout);
       next();
     });
-    // Routing
-    app.use('/ping', function (req, res) {
-      res.end('OK');
+    // Access to session token
+    app.use(function (req, res, next) {
+      if (req.user) {
+        const expires = parseInt(nconf.get('session:expires')) * 60;
+        Object.assign(req, 'token', {
+          get () {
+            const now = ~~(Date.now() / 1000);
+            const obj = {
+              id: req.user.id,
+              exp: now + expires
+            };
+            return jwt.sign(obj, nconf.get('session:key'));
+          }
+        });
+      }
+      next();
     });
-    app.use('/api', await setupRoutes());
+    // Routing
+    app.use(await setupRoutes());
     // Static
     [nconf.get('static:dir'), PUBLIC_DIR].forEach(function (dir) {
       if (!dir) return;
@@ -186,7 +206,7 @@ export default async function () {
     // HTTP web server
     if (protocol === 'https' && nconf.get('http:port')) {
       httpServer = http.createServer(async function (req, res) {
-      // Response timeout
+        // Response timeout
         const timeout = nconf.get('http:timeout');
         if (timeout) req.setTimeout(timeout);
         // ACME HTTP validation (from directory)
@@ -221,8 +241,9 @@ export default async function () {
       });
     }
     // Lifecycle event
-    lifecycle.emit('started');
+    lifecycle.emit('startup');
   } catch (err) {
-    return shutdown();
+    const timeout = parseInt(nconf.get('timeout')) || 0;
+    setTimeout(shutdown, timeout * 1000);
   }
 }

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import searchParser from './search.mjs';
+import searchParser from '../lib/search-parser.mjs';
 
 const dao = {
   /**
