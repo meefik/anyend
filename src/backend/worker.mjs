@@ -7,13 +7,18 @@ import api from './api/index.mjs';
 
 async function loadPlugins (ctx) {
   const plugins = {
-    lifecycle,
     db,
-    api
+    api,
+    lifecycle
   };
+  const shutdown = [];
   for (const k in plugins) {
-    const close = await plugins[k](ctx[k]);
-    events.on('shutdown', close);
+    const fn = await plugins[k](ctx[k]);
+    shutdown.push(fn);
+  }
+  shutdown.reverse();
+  for (const fn of shutdown) {
+    events.on('shutdown', fn);
   }
 }
 
@@ -31,6 +36,6 @@ export default async function () {
       level: 'error',
       message: err.message
     });
-    process.emit('SIGTERM');
+    process.emit('exit', 1);
   }
 }

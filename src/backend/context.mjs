@@ -1,18 +1,31 @@
 import crypto from 'node:crypto';
 import { tmpdir } from 'node:os';
+import passport from 'passport';
+import LocalStrategy from 'passport-local';
 
 export default async function () {
+  passport.use('local', new LocalStrategy({
+    usernameField: 'username',
+    passwordField: 'password',
+    passReqToCallback: true
+  }, async (req, username, password, done) => {
+    try {
+      console.log(username, password);
+      done(null, true);
+    } catch (err) {
+      done(err, false);
+    }
+  }));
+
   return {
-    global: {
-      VERSION: '1.0.0',
-      encryptPassword (password, salt) {
-        if (!salt) salt = crypto.randomBytes(32).toString('base64');
-        const hash = crypto.createHmac('sha1', salt).update(password).digest('base64');
-        return { salt, hash };
-      },
-      isAuthenticated (roles, req) {
-        return roles.includes(req.user?.role);
-      }
+    VERSION: '1.0.0',
+    encryptPassword (password, salt) {
+      if (!salt) salt = crypto.randomBytes(32).toString('base64');
+      const hash = crypto.createHmac('sha1', salt).update(password).digest('base64');
+      return { salt, hash };
+    },
+    isAuthenticated (roles, req) {
+      return roles.includes(req.user?.role);
     },
     db: {
       uri: process.env.MONGO_URI || 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin',
@@ -30,7 +43,8 @@ export default async function () {
       timeout: 60,
       routes: [{
         middleware: [
-          async (req, res) => console.log('middleware')
+          async (req, res, next) => console.log('middleware'),
+          passport.initialize()
         ]
       }, {
         method: 'post',
@@ -49,13 +63,11 @@ export default async function () {
         method: 'post',
         path: '/login',
         middleware: [
-          async (req) => await req.logIn({
-            username: req.body.username,
-            password: req.user.password
-          }, {
-            strategy: 'plain',
-            upsert: false
-          })
+          passport.authenticate('local'),
+          async (req, res) => {
+            console.log('login');
+            // res.json({});
+          }
         ]
       }, {
         method: 'post',
@@ -100,7 +112,7 @@ export default async function () {
       },
       async shutdown () {
         console.log('shutdown');
-        return new Promise(resolve => setTimeout(resolve, 5000));
+        // return new Promise(resolve => setTimeout(resolve, 5000));
       }
     },
     tasks: {

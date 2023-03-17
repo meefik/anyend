@@ -2,10 +2,10 @@ import express from 'express';
 import dao from '../db/dao.mjs';
 import render from '../utils/render.mjs';
 
-export default async function () {
+export default async function (ctx) {
   const router = express.Router();
 
-  const { routes = [] } = global.config || {};
+  const { routes = [] } = ctx || {};
   for (const route of routes) {
     const { method = 'get', path, middleware } = route;
     if (!middleware) continue;
@@ -27,7 +27,7 @@ export default async function () {
         if (typeof _middleware === 'function') {
           router[method](path, async function (req, res, next) {
             try {
-              await _middleware(req, res);
+              await _middleware(req, res, next);
               next();
             } catch (err) {
               next(err);
@@ -57,7 +57,7 @@ export default async function () {
       } else if (typeof _middleware === 'function') {
         router.use(async function (req, res, next) {
           try {
-            await _middleware(req, res);
+            await _middleware(req, res, next);
             next();
           } catch (err) {
             next(err);

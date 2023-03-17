@@ -11,26 +11,27 @@ const {
 } = process.env;
 
 // Shutdown worker
-async function shutdown () {
+async function shutdown (code = 0) {
   if (shutdown.executed) return;
   shutdown.executed = true;
+  const timeout = parseInt(TIMEOUT);
+  if (timeout > 0) {
+    setTimeout(() => process.exit(1), timeout * 1000);
+  }
+  if (cluster.isPrimary) return;
   try {
-    const timeout = parseInt(TIMEOUT);
-    if (timeout > 0) {
-      setTimeout(() => process.exit(1), timeout * 1000);
-    }
     await events.emit('shutdown');
     logger.log({
       level: 'info',
       message: 'Worker has been stopped'
     });
-    if (cluster.isWorker) process.exit(0);
+    process.exit(code);
   } catch (err) {
     logger.log({
       level: 'error',
       message: err.message
     });
-    if (cluster.isWorker) process.exit(1);
+    process.exit(1);
   }
 }
 
@@ -43,11 +44,13 @@ process.on('uncaughtException', function (err) {
   });
 });
 // Process termination
-process.once('SIGTERM', shutdown);
+process.once('SIGTERM', () => shutdown());
 // Ctrl+C
-process.once('SIGINT', shutdown);
+process.once('SIGINT', () => shutdown());
 // Graceful shutdown for nodemon
-process.once('SIGUSR2', shutdown);
+process.once('SIGUSR2', () => shutdown());
+// Shutdown with an exit code
+process.once('exit', (code) => shutdown(code));
 
 if (cluster.isPrimary) {
   // Create workers

@@ -21,9 +21,12 @@ export default {
       }
     });
   },
-  emit (event, ...args) {
+  async emit (event, ...args) {
     const arr = events[event];
-    if (!arr) return;
-    return Promise.all(arr.map((fn) => fn.call({ event }, ...args)));
+    if (arr) {
+      for (const fn of arr) {
+        await fn?.call({ event }, ...args);
+      }
+    }
   }
 };

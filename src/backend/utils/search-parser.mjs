@@ -3,7 +3,7 @@
 // >, <, =, !=, >=, <=, ~, ~*
 //
 // Input:
-// a.x1 > 0 & ( b >= 0 | (c > 0 & d ~ 'a + b & c = 0' & f <= -1 | a ~* "hello")) & e != 10 | g = [1,2,"z"]
+// a.x1 > 0 & ( b >= 0 | (c > 0 & d ~ 'a + b & c = 0' & f <= -1 | a ~* "hello" )) & e != 10 | g = [1,2,"z"] & n = ""
 // Output:
 // {"$or":[
 //   {"$and":[
@@ -21,7 +21,10 @@
 //     ]},
 //     {"e":{"$ne":"10"}}
 //   ]},
-//   {"g":["1","2","z"]}
+//   {"$and": [
+//     {"g":["1","2","z"]},
+//     {"n":{$in:["",null]}}
+//   ]}
 // ]}
 
 const patterns = [
@@ -45,9 +48,7 @@ function parse (str, params = {}, opts = {}) {
   }
   if (!opts.p) {
     do {
-      opts.p = Math.random()
-        .toString(16)
-        .slice(2);
+      opts.p = Math.random().toString(16).slice(2);
     } while (str.indexOf(opts.p) > -1);
   }
   for (let i = 0; i < patterns.length; i++) {
@@ -114,26 +115,28 @@ function compile (str, params = {}) {
   case /!=/.test(val): {
     const r = val.split(/\s*!=\s*/);
     const field = compile(r[0], params);
-    const value = compile(r[1], params);
-    return { [field]: { $ne: value } };
+    let value = compile(r[1], params);
+    if (!value) value = ['', null];
+    return { [field]: Array.isArray(value) ? { $nin: value } : { $ne: value } };
   }
   case /=/.test(val): {
     const r = val.split(/\s*=\s*/);
     const field = compile(r[0], params);
-    const value = compile(r[1], params);
-    return { [field]: value };
+    let value = compile(r[1], params);
+    if (!value) value = ['', null];
+    return { [field]: Array.isArray(value) ? { $in: value } : value };
   }
   case /~\*/.test(val): {
     const r = val.split(/\s*~\*\s*/);
     const field = compile(r[0], params);
     const value = compile(r[1], params);
-    return { [field]: { $regex: new RegExp(value), $options: 'i' } };
+    return { [field]: { $regex: value, $options: 'i' } };
   }
   case /~/.test(val): {
     const r = val.split(/\s*~\s*/);
     const field = compile(r[0], params);
     const value = compile(r[1], params);
-    return { [field]: { $regex: new RegExp(value) } };
+    return { [field]: { $regex: value } };
   }
   case /&/.test(val): {
     const arr = [];

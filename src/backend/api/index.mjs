@@ -4,7 +4,10 @@ import http from 'node:http';
 import https from 'node:https';
 import express from 'express';
 import morgan from 'morgan';
+import compression from 'compression';
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import passport from 'passport';
 import logger from '../utils/logger.mjs';
 import rest from './rest.mjs';
 
@@ -69,18 +72,12 @@ export default async function (ctx) {
       logger.log({ level, label, message });
     })
   );
-  // app.use(compression());
+  app.use(compression());
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
-  // app.use(cors({ origin: true }));
+  app.use(cors({ origin: true }));
   app.use(cookieParser());
   // app.use(passport.initialize());
-  // Response timeout
-  // app.use(function (req, res, next) {
-  //   const timeout = nconf.get('http:timeout');
-  //   if (timeout) req.setTimeout(timeout);
-  //   next();
-  // });
   // Access to session token
   // app.use(function (req, res, next) {
   //   if (req.user) {
@@ -102,7 +99,7 @@ export default async function (ctx) {
     if (ctx.timeout) req.setTimeout(ctx.timeout * 1000);
     next();
   });
-  app.use(await rest());
+  app.use(await rest(ctx));
   // Static
   // if (nconf.get('static:dir')) {
   //   app.use(
