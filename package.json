@@ -1,7 +1,7 @@
 {
-  "name": "enyend",
+  "name": "anyend",
   "version": "0.1.0",
-  "description": "Software server infrastructure.",
+  "description": "Platform to speed up backend creation.",
   "repository": "github:meefik/enyend",
   "license": "AGPL",
   "bin": "dist/server.js",

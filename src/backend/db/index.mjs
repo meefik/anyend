@@ -1,51 +1,44 @@
-import nconf from 'nconf';
 import mongoose from 'mongoose';
-import './models/config.mjs';
-import './models/session.mjs';
-import './models/user.mjs';
-import dao from './dao.mjs';
-import logger from '../lib/logger.mjs';
+import logger from '../utils/logger.mjs';
+import models from './models.mjs';
 
-const conn = mongoose.connection;
+export default async function (ctx) {
+  const conn = mongoose.connection;
 
-// Show debug logs
-if (logger.level === 'debug') {
-  mongoose.set('debug', function (collectionName, method, query, doc) {
-    // LOG format: rooms.find({}) { sort: {}, fields: undefined }
-    logger.log({
-      level: 'debug',
-      label: 'db',
-      message: `${collectionName}.${method}(${
-        query ? JSON.stringify(query) : ''
-      }) ${doc ? JSON.stringify(doc) : ''}`
+  // Show debug logs
+  if (logger.level === 'debug') {
+    mongoose.set('debug', function (collectionName, method, query, doc) {
+      // LOG format: rooms.find({}) { sort: {}, fields: undefined }
+      logger.log({
+        level: 'debug',
+        label: 'db',
+        message: `${collectionName}.${method}(${
+          query ? JSON.stringify(query) : ''
+        }) ${doc ? JSON.stringify(doc) : ''}`
+      });
     });
+  }
+
+  conn.on('connected', async function () {
+    logger.log({ level: 'info', label: 'db', message: 'Database is connected' });
   });
-}
 
-conn.on('connected', async function () {
-  logger.log({ level: 'info', label: 'db', message: 'Database is connected' });
-});
+  conn.on('disconnected', function () {
+    logger.log({ level: 'info', label: 'db', message: 'Database has been disconnected' });
+  });
 
-conn.on('disconnected', function () {
-  logger.log({ level: 'info', label: 'db', message: 'Database has been disconnected' });
-});
+  conn.on('error', function (err) {
+    logger.log({ level: 'error', label: 'db', message: err });
+  });
 
-conn.on('error', function (err) {
-  logger.log({ level: 'error', label: 'db', message: err });
-});
+  await mongoose.connect(ctx.uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
 
-export default {
-  get connection () {
-    return conn;
-  },
-  connect () {
-    return mongoose.connect(nconf.get('mongo:uri'), {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-  },
-  disconnect () {
-    return conn.close();
-  },
-  ...dao
+  await models(ctx);
+
+  await mongoose.syncIndexes();
+
+  return () => conn.close();
 };

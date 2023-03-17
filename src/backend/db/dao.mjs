@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import searchParser from '../lib/search-parser.mjs';
+import searchParser from '../utils/search-parser.mjs';
 
 const dao = {
   /**
@@ -39,7 +39,7 @@ const dao = {
    * @param {Object} [query.select] Включить или исключить поля документа.
    * @param {Object} [query.populate] Связь с другими моделями.
    * @param {boolean} [query.count] Подсчет числа найденных элементов.
-   * @param {boolean} [query.single] Вернуть только одну запись.
+   * @param {boolean} [query.one] Вернуть только одну запись.
    * @param {boolean} [query.cursor] Вернуть курсор.
    * @returns {Promise}
    */
@@ -54,7 +54,7 @@ const dao = {
       skip,
       limit,
       count,
-      single,
+      one,
       cursor
     } = query;
     let transaction;
@@ -62,18 +62,13 @@ const dao = {
       filter = searchParser(filter);
     }
     if (typeof filter === 'object' && filter.id) {
-      if (Array.isArray(filter.id)) {
-        filter._id = { $in: filter.id };
-      } else {
-        if (`${single}` !== 'false') single = true;
-        filter._id = filter.id;
-      }
+      filter._id = Array.isArray(filter.id) ? { $in: filter.id } : filter.id;
       delete filter.id;
     }
     if (typeof populate === 'string') {
       populate = populate.split(/\s*,\s*/);
     }
-    if (single) {
+    if (one) {
       transaction = Model.findOne(filter);
       if (select) transaction.select(select);
       if (populate) transaction.populate(populate);
