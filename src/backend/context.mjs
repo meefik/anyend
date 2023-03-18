@@ -1,31 +1,13 @@
 import crypto from 'node:crypto';
 import { tmpdir } from 'node:os';
-import passport from 'passport';
-import LocalStrategy from 'passport-local';
 
 export default async function () {
-  passport.use('local', new LocalStrategy({
-    usernameField: 'username',
-    passwordField: 'password',
-    passReqToCallback: true
-  }, async (req, username, password, done) => {
-    try {
-      console.log(username, password);
-      done(null, true);
-    } catch (err) {
-      done(err, false);
-    }
-  }));
-
   return {
     VERSION: '1.0.0',
     encryptPassword (password, salt) {
       if (!salt) salt = crypto.randomBytes(32).toString('base64');
       const hash = crypto.createHmac('sha1', salt).update(password).digest('base64');
       return { salt, hash };
-    },
-    isAuthenticated (roles, req) {
-      return roles.includes(req.user?.role);
     },
     db: {
       uri: process.env.MONGO_URI || 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin',
@@ -41,45 +23,64 @@ export default async function () {
       host: process.env.HOST,
       port: process.env.PORT || 3000,
       timeout: 60,
+      session: {
+        secret: 'secret',
+        expires: 60,
+        sources: [
+          { field: 'token', type: 'cookies' },
+          { field: 'authorization', type: 'headers' },
+          { field: 'token', type: 'query' }
+        ]
+      },
+      cors: {
+        origin: true
+      },
+      compression: {},
+      passport: {
+        async isAuthenticated (req, roles) {
+          console.log('isAuth');
+          return roles.includes(req.user?.role);
+        },
+        authenticators: [{
+          strategy: 'local',
+          options: {
+            usernameField: 'username',
+            passwordField: 'password'
+          },
+          async authorize (req, username, password) {
+            console.log(username, password);
+            return { username };
+          }
+        }]
+      },
       routes: [{
         middleware: [
-          async (req, res, next) => console.log('middleware'),
-          passport.initialize()
-        ]
-      }, {
-        method: 'post',
-        path: '/jwt',
-        middleware: [
-          async (req) => await req.logIn({
-            strategy: 'jwt',
-            secret: process.env.JWT_SECRET
-          }),
-          async (req, res) =>
-            req.user
-              ? res.json({ token: req.token })
-              : res.status(401).end()
+          async (req, res, next) => console.log('middleware')
         ]
       }, {
         method: 'post',
         path: '/login',
         middleware: [
-          passport.authenticate('local'),
+          async (req) => console.log(await req.logIn('local')),
           async (req, res) => {
-            console.log('login');
-            // res.json({});
+            console.log('login', req.isAuthenticated());
+            res.cookie('aaa', 'bbb');
+            res.json({ user: req.user, session: req.session, cookies: req.cookies });
           }
         ]
       }, {
         method: 'post',
         path: '/logout',
         middleware: [
-          async (req) => await req.logOut()
+          async (req) => console.log(await req.logOut())
         ]
       }, {
-        method: 'get',
+        method: 'post',
         path: '/state',
         middleware: [
-          (req) => global.isAuthenticated(['admin'], req),
+          async (req) => {
+            if (!req.isAuthenticated(['admin'])) throw Error('Unauthorized');
+          },
           async (req, res) => {
             res.json({
               user: req.user,

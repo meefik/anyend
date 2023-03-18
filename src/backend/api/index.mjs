@@ -7,7 +7,12 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+// import session from 'express-session';
+// import session from 'cookie-session';
 import passport from 'passport';
+import jwt from 'jsonwebtoken';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import logger from '../utils/logger.mjs';
 import rest from './rest.mjs';
 
@@ -32,6 +37,26 @@ function parseConf (val) {
 };
 
 export default async function (ctx) {
+  // Load passport stratagies
+  ctx.passport?.authenticators && [].concat(ctx.passport?.authenticators).forEach(authenticator => {
+    const { strategy, options, authorize } = authenticator;
+    switch (strategy) {
+    case 'local':
+      passport.use('local', new LocalStrategy({
+        ...options,
+        passReqToCallback: true
+      }, async (req, username, password, done) => {
+        try {
+          const payload = await authorize(req, username, password);
+          done(null, payload);
+        } catch (err) {
+          done(err);
+        }
+      }));
+      break;
+    }
+  });
+
   // Create web server
   const app = express();
   const protocol = ctx.ssl ? 'https' : 'http';
@@ -72,34 +97,122 @@ export default async function (ctx) {
       logger.log({ level, label, message });
     })
   );
-  app.use(compression());
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
-  app.use(cors({ origin: true }));
   app.use(cookieParser());
-  // app.use(passport.initialize());
-  // Access to session token
-  // app.use(function (req, res, next) {
-  //   if (req.user) {
-  //     const expires = parseInt(nconf.get('session:expires')) * 60;
-  //     Object.assign(req, 'token', {
-  //       get () {
-  //         const now = ~~(Date.now() / 1000);
-  //         const obj = {
-  //           id: req.user.id,
-  //           exp: now + expires
-  //         };
-  //         return jwt.sign(obj, nconf.get('session:key'));
-  //       }
-  //     });
-  //   }
-  //   next();
-  // });
-  app.use(function (req, res, next) {
-    if (ctx.timeout) req.setTimeout(ctx.timeout * 1000);
+  ctx.compression && app.use(compression(ctx.compression));
+  ctx.cors && app.use(cors(ctx.cors));
+  ctx.session && app.use(function (req, res, next) {
+    const {
+      secret = 'secret',
+      expires = 60,
+      sources = [
+        { field: 'token', type: 'cookies' },
+        { field: 'authorization', type: 'headers' },
+        { field: 'token', type: 'query' }
+      ]
+    } = ctx.session;
+    let payload, token;
+    try {
+      for (const source of sources) {
+        const { type, field } = source;
+        token = req[type] && req[type][field];
+        // Authorization: <type> <credentials>
+        if (token && type === 'headers' && field === 'authorization') {
+          token = token.split(/\s+/)[1];
+        }
+        if (token) break;
+      }
+      if (token) {
+        payload = jwt.verify(token, secret);
+      }
+    } catch (err) {
+      payload = null;
+      token = null;
+    }
+
+    Object.defineProperty(req, 'session', {
+      enumerable: true,
+      configurable: true,
+      get () {
+        console.log('token-get');
+        return token;
+      },
+      set (val) {
+        console.log('token-set', val);
+        try {
+          if (!val) {
+            payload = null;
+            token = null;
+          } else {
+            token = val;
+            payload = jwt.verify(token, secret);
+          }
+        } catch (err) {
+          payload = null;
+          token = null;
+        }
+      }
+    });
+
+    Object.defineProperty(req, 'user', {
+      enumerable: true,
+      configurable: true,
+      get () {
+        console.log('session-get');
+        return payload;
+      },
+      set (obj) {
+        console.log('session-set', obj);
+        try {
+          if (!obj) {
+            payload = null;
+            token = null;
+          } else {
+            const exp = ~~(Date.now() / 1000) + (expires * 60);
+            payload = { exp, ...obj };
+            token = jwt.sign(payload, secret);
+          }
+        } catch (err) {
+          payload = null;
+          token = null;
+        }
+      }
+    });
     next();
   });
-  app.use(await rest(ctx));
+  if (ctx.passport) {
+    app.use(passport.initialize());
+    app.use(function (req, res, next) {
+      req.logIn = (strategy) => {
+        return new Promise((resolve, reject) => {
+          passport.authenticate(strategy, function (err, user) {
+            if (err) return reject(err);
+            req.user = user || null;
+            resolve(user);
+          })(req, res, next);
+        });
+      };
+      req.logOut = () => {
+        return new Promise((resolve) => {
+          const user = req.user;
+          res.user = null;
+          resolve(user);
+        });
+      };
+      if (typeof ctx.passport?.isAuthenticated === 'function') {
+        req.isAuthenticated = (...args) => ctx.passport.isAuthenticated(req, ...args);
+      }
+      next();
+    });
+  }
+  // ctx.passport && app.use(passport.session({ key: 'payload' }));
+  // ctx.passport && app.use(passport.authenticate('session'));
+  ctx.timeout && app.use(function (req, res, next) {
+    req.setTimeout(ctx.timeout * 1000);
+    next();
+  });
+  ctx.routes && app.use(await rest(ctx.routes));
   // Static
   // if (nconf.get('static:dir')) {
   //   app.use(

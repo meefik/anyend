@@ -33,6 +33,7 @@
     "agenda": "^5.0.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
+    "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
