@@ -7,12 +7,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-// import session from 'express-session';
-// import session from 'cookie-session';
-import passport from 'passport';
 import jwt from 'jsonwebtoken';
-import { Strategy as LocalStrategy } from 'passport-local';
-import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
 import logger from '../utils/logger.mjs';
 import rest from './rest.mjs';
 
@@ -30,33 +25,13 @@ function parseConf (val) {
   } catch (err) {
     logger.log({
       level: 'error',
-      label: 'server',
+      label: 'api',
       message: err.message || err
     });
   }
 };
 
 export default async function (ctx) {
-  // Load passport stratagies
-  ctx.passport?.authenticators && [].concat(ctx.passport?.authenticators).forEach(authenticator => {
-    const { strategy, options, authorize } = authenticator;
-    switch (strategy) {
-    case 'local':
-      passport.use('local', new LocalStrategy({
-        ...options,
-        passReqToCallback: true
-      }, async (req, username, password, done) => {
-        try {
-          const payload = await authorize(req, username, password);
-          done(null, payload);
-        } catch (err) {
-          done(err);
-        }
-      }));
-      break;
-    }
-  });
-
   // Create web server
   const app = express();
   const protocol = ctx.ssl ? 'https' : 'http';
@@ -181,38 +156,11 @@ export default async function (ctx) {
     });
     next();
   });
-  if (ctx.passport) {
-    app.use(passport.initialize());
-    app.use(function (req, res, next) {
-      req.logIn = (strategy) => {
-        return new Promise((resolve, reject) => {
-          passport.authenticate(strategy, function (err, user) {
-            if (err) return reject(err);
-            req.user = user || null;
-            resolve(user);
-          })(req, res, next);
-        });
-      };
-      req.logOut = () => {
-        return new Promise((resolve) => {
-          const user = req.user;
-          res.user = null;
-          resolve(user);
-        });
-      };
-      if (typeof ctx.passport?.isAuthenticated === 'function') {
-        req.isAuthenticated = (...args) => ctx.passport.isAuthenticated(req, ...args);
-      }
-      next();
-    });
-  }
-  // ctx.passport && app.use(passport.session({ key: 'payload' }));
-  // ctx.passport && app.use(passport.authenticate('session'));
   ctx.timeout && app.use(function (req, res, next) {
     req.setTimeout(ctx.timeout * 1000);
     next();
   });
-  ctx.routes && app.use(await rest(ctx.routes));
+  app.use(await rest());
   // Static
   // if (nconf.get('static:dir')) {
   //   app.use(
@@ -249,14 +197,14 @@ export default async function (ctx) {
   server.once('close', function () {
     logger.log({
       level: 'info',
-      label: 'server',
+      label: 'api',
       message: 'Listener has been stopped'
     });
   });
   server.on('error', function (err) {
     logger.log({
       level: 'error',
-      label: 'server',
+      label: 'api',
       message: err.message || err
     });
   });
@@ -264,7 +212,7 @@ export default async function (ctx) {
     const address = this.address();
     logger.log({
       level: 'info',
-      label: 'server',
+      label: 'api',
       message: `Listening on ${address.address}:${address.port}`
     });
   });

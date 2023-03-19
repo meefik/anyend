@@ -96,9 +96,9 @@ const dao = {
         const total = await Model.countDocuments(filter);
         if (total > 0) {
           const data = await transaction.exec();
-          return { total, data };
+          return { total, skip, limit, data };
         } else {
-          return { total: 0, data: [] };
+          return { total: 0, skip, limit, data: [] };
         }
       } else {
         if (cursor) return transaction.cursor();
