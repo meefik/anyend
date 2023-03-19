@@ -7,7 +7,7 @@ export default [
   },
   {
     path: '/user',
-    roles: ['admin'],
+    roles1: ['admin'],
     middleware: user
   }
 ];

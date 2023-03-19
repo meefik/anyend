@@ -1,3 +1,4 @@
+import cluster from 'node:cluster';
 import mongoose from 'mongoose';
 import logger from '../utils/logger.mjs';
 import models from '../models/index.mjs';
@@ -33,7 +34,8 @@ export default async function (ctx) {
 
   await mongoose.connect(ctx.uri, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    autoIndex: false
   });
 
   for (const name in models) {
@@ -41,7 +43,15 @@ export default async function (ctx) {
     const schema = new mongoose.Schema(params.schema);
     for (const name in params.virtuals) {
       const value = params.virtuals[name];
-      schema.virtual(name, value);
+      if (value.get) {
+        schema.virtual(name).get(value.get);
+      }
+      if (value.set) {
+        schema.virtual(name).set(value.set);
+      }
+      if (!value.get || value.set) {
+        schema.virtual(name, value);
+      }
     }
     for (const name in params.methods) {
       const value = params.methods[name];
@@ -66,10 +76,14 @@ export default async function (ctx) {
       const value = params.events[name];
       model.on(name, value);
     }
+    if (cluster.worker.id === 1) {
+      model.emit('load');
+    }
   }
 
-  // FIXME: Run only once
-  await mongoose.syncIndexes();
+  if (cluster.worker.id === 1) {
+    await mongoose.syncIndexes();
+  }
 
   return () => conn.close();
 };

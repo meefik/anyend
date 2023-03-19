@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 export default {
   schema: {
     username: {
@@ -51,9 +53,11 @@ export default {
         username
       }).select('+hash +salt').exec();
       if (user?.validPassword(password)) return user;
-    },
-    async createDefaultUser () {
-      const user = await this.findOne({ role: 'admin' }).select({ _id: 1 }).lean();
+    }
+  },
+  events: {
+    async load () {
+      const user = await this.findOne({ role: 'admin' }).select({ _id: 1 });
       if (!user) {
         const user = new this({
           role: 'admin',
@@ -62,11 +66,6 @@ export default {
         });
         await user.save();
       }
-    }
-  },
-  events: {
-    async index (err) {
-      if (!err) await this.createDefaultUser();
     }
   }
 };

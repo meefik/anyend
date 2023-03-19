@@ -40,6 +40,8 @@ const dao = {
    * @param {Object} [query.populate] Связь с другими моделями.
    * @param {boolean} [query.count] Подсчет числа найденных элементов.
    * @param {boolean} [query.one] Вернуть только одну запись.
+   * @param {string} [query.cache.key] Ключ для кеширования.
+   * @param {number} [query.cache.expires=60] Время кеширования.
    * @param {boolean} [query.cursor] Вернуть курсор.
    * @returns {Promise}
    */
@@ -55,9 +57,15 @@ const dao = {
       limit,
       count,
       one,
+      cache,
       cursor
     } = query;
-    let transaction;
+    const { key, expires } = cache || {};
+    if (key) {
+      const data = await mongoose.model('Cache').readCache(key, expires);
+      if (data) return data;
+    }
+    let transaction, data;
     if (typeof filter === 'string') {
       filter = searchParser(filter);
     }
@@ -72,8 +80,7 @@ const dao = {
       transaction = Model.findOne(filter);
       if (select) transaction.select(select);
       if (populate) transaction.populate(populate);
-      const data = await transaction.exec();
-      return data;
+      data = await transaction.exec();
     } else {
       transaction = Model.find(filter);
       if (sort) {
@@ -95,16 +102,18 @@ const dao = {
       if (count) {
         const total = await Model.countDocuments(filter);
         if (total > 0) {
-          const data = await transaction.exec();
-          return { total, skip, limit, data };
+          data = { total, skip, limit, data: await transaction.exec() };
         } else {
-          return { total: 0, skip, limit, data: [] };
+          data = { total: 0, skip, limit, data: [] };
         }
       } else {
         if (cursor) return transaction.cursor();
-        const data = await transaction.exec();
-        return data;
+        data = await transaction.exec();
       }
+      if (key) {
+        await mongoose.model('Cache').writeCache(key, data);
+      }
+      return data;
     }
   },
   /**

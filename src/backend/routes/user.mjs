@@ -2,22 +2,22 @@ export default [
   {
     method: 'post',
     path: '/:id',
-    roles: ['admin'],
+    schema: 'User',
+    operator: 'read',
     cache: {
       key: 'req.params.id',
-      expires: 60
+      expires: 60 * 60
     },
-    middleware: [{
-      schema: 'User',
-      operator: 'read',
-      filter: 'req.query.filter',
-      select: 'req.query.select',
-      sort: 'req.query.sort',
-      populate: 'req.query.populate',
-      one: false,
-      count: true,
-      skip: 0,
-      limit: 10
-    }]
+    filter: 'req.query.filter',
+    select: 'req.query.select',
+    sort: 'req.query.sort',
+    populate: 'req.query.populate',
+    one: false,
+    count: true,
+    skip: 0,
+    limit: 10
+    // middleware: [{
+
+    // }]
   }
 ];
