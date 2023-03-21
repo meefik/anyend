@@ -77,6 +77,7 @@ export default async function () {
       async set (val) {
         if (req.user?.sid && val !== session) {
           await db.model('Session')?.updateOne({ _id: req.user?.sid }, { $set: { data: val } });
+          session = val;
         }
       }
     });
