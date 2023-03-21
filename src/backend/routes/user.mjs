@@ -1,7 +1,7 @@
 export default [
   {
     method: 'post',
-    path: '/:id',
+    path: '/user/:id',
     schema: 'User',
     operator: 'read',
     cache: {
@@ -16,8 +16,5 @@ export default [
     count: true,
     skip: 0,
     limit: 10
-    // middleware: [{
-
-    // }]
   }
 ];

@@ -1,4 +1,6 @@
 import user from './user.mjs';
+import login from './login.mjs';
+import state from './state.mjs';
 
 export default [
   (req, res, next) => {
@@ -6,8 +8,12 @@ export default [
     next();
   },
   {
-    path: '/user',
-    roles1: ['admin'],
-    middleware: user
+    path: '/api',
+    roles1: ['guest', 'admin'],
+    middleware: [
+      user,
+      login,
+      state
+    ]
   }
 ];

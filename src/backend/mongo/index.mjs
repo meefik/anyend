@@ -1,14 +1,15 @@
 import cluster from 'node:cluster';
-import mongoose from 'mongoose';
+import config from 'nconf';
+import db from 'mongoose';
 import logger from '../utils/logger.mjs';
 import models from '../models/index.mjs';
 
-export default async function (ctx) {
-  const conn = mongoose.connection;
+export default async function () {
+  const conn = db.connection;
 
   // Show debug logs
   if (logger.level === 'debug') {
-    mongoose.set('debug', function (collectionName, method, query, doc) {
+    db.set('debug', function (collectionName, method, query, doc) {
       // LOG format: rooms.find({}) { sort: {}, fields: undefined }
       logger.log({
         level: 'debug',
@@ -32,7 +33,7 @@ export default async function (ctx) {
     logger.log({ level: 'error', label: 'mongo', message: err });
   });
 
-  await mongoose.connect(ctx.uri, {
+  await db.connect(config.get('mongo:uri'), {
     useNewUrlParser: true,
     useUnifiedTopology: true,
     autoIndex: false
@@ -40,7 +41,17 @@ export default async function (ctx) {
 
   for (const name in models) {
     const params = models[name];
-    const schema = new mongoose.Schema(params.schema);
+    const schema = new db.Schema(params.schema, params.options);
+    const { versionKey, discriminatorKey } = schema.options;
+    schema.set('toJSON', {
+      transform (doc, ret) {
+        ret.id = ret._id;
+        delete ret._id;
+        delete ret[versionKey];
+        delete ret[discriminatorKey];
+        return ret;
+      }
+    });
     for (const name in params.virtuals) {
       const value = params.virtuals[name];
       if (value.get) {
@@ -61,17 +72,7 @@ export default async function (ctx) {
       const value = params.statics[name];
       schema.statics[name] = value;
     }
-    const { versionKey, discriminatorKey } = schema.options;
-    schema.set('toJSON', {
-      transform (doc, ret) {
-        ret.id = ret._id;
-        delete ret._id;
-        delete ret[versionKey];
-        delete ret[discriminatorKey];
-        return ret;
-      }
-    });
-    const model = mongoose.model(name, schema);
+    const model = db.model(name, schema);
     for (const name in params.events) {
       const value = params.events[name];
       model.on(name, value);
@@ -82,7 +83,7 @@ export default async function (ctx) {
   }
 
   if (cluster.worker.id === 1) {
-    await mongoose.syncIndexes();
+    await db.syncIndexes();
   }
 
   return () => conn.close();

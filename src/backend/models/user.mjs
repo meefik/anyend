@@ -2,6 +2,11 @@ import crypto from 'node:crypto';
 
 export default {
   schema: {
+    createdAt: {
+      type: Date,
+      default: Date.now,
+      immutable: true
+    },
     username: {
       type: String,
       unique: true,
@@ -47,8 +52,7 @@ export default {
     }
   },
   statics: {
-    async logIn (data) {
-      const { username, password } = data || {};
+    async logIn (username, password) {
       const user = await this.findOne({
         username
       }).select('+hash +salt').exec();

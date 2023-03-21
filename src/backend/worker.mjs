@@ -1,6 +1,6 @@
+import './config.mjs';
 import events from './utils/events.mjs';
 import logger from './utils/logger.mjs';
-import config from './config.mjs';
 import mongo from './mongo/index.mjs';
 import api from './api/index.mjs';
 
@@ -9,10 +9,10 @@ const plugins = {
   api
 };
 
-async function loadPlugins (ctx) {
+async function loadPlugins () {
   const shutdown = [];
   for (const k in plugins) {
-    const fn = await plugins[k](ctx[k]);
+    const fn = await plugins[k]();
     shutdown.push(fn);
   }
   shutdown.reverse();
@@ -23,8 +23,7 @@ async function loadPlugins (ctx) {
 
 export default async function () {
   try {
-    const ctx = await config();
-    await loadPlugins(ctx);
+    await loadPlugins();
     await events.emit('startup');
     logger.log({
       level: 'info',

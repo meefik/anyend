@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import db from 'mongoose';
 import searchParser from '../utils/search-parser.mjs';
 
 const dao = {
@@ -11,7 +11,7 @@ const dao = {
    * @returns {Promise}
    */
   async create (model, query, data) {
-    const Model = mongoose.connection.models[model];
+    const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { populate } = query;
     if (data.id) {
@@ -40,13 +40,11 @@ const dao = {
    * @param {Object} [query.populate] Связь с другими моделями.
    * @param {boolean} [query.count] Подсчет числа найденных элементов.
    * @param {boolean} [query.one] Вернуть только одну запись.
-   * @param {string} [query.cache.key] Ключ для кеширования.
-   * @param {number} [query.cache.expires=60] Время кеширования.
    * @param {boolean} [query.cursor] Вернуть курсор.
    * @returns {Promise}
    */
   async read (model, query) {
-    const Model = mongoose.connection.models[model];
+    const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let {
       filter,
@@ -57,14 +55,8 @@ const dao = {
       limit,
       count,
       one,
-      cache,
       cursor
     } = query;
-    const { key, expires } = cache || {};
-    if (key) {
-      const data = await mongoose.model('Cache').readCache(key, expires);
-      if (data) return data;
-    }
     let transaction, data;
     if (typeof filter === 'string') {
       filter = searchParser(filter);
@@ -110,9 +102,6 @@ const dao = {
         if (cursor) return transaction.cursor();
         data = await transaction.exec();
       }
-      if (key) {
-        await mongoose.model('Cache').writeCache(key, data);
-      }
       return data;
     }
   },
@@ -128,7 +117,7 @@ const dao = {
    * @returns {Promise}
    */
   async update (model, query, data) {
-    const Model = mongoose.connection.models[model];
+    const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { filter, upsert, select, populate } = query;
     if (typeof filter === 'string') {
@@ -179,7 +168,7 @@ const dao = {
    * @returns {Promise}
    */
   async delete (model, query) {
-    const Model = mongoose.connection.models[model];
+    const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { filter, select, populate } = query;
     if (typeof filter === 'string') {
