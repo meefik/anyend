@@ -17,29 +17,6 @@ export default {
   api: {
     host: HOST,
     port: PORT || 3000,
-    timeout: 60, // seconds
-    ssl: {
-      // key: '-----BEGIN RSA PRIVATE KEY-----\n...',
-      // cert: '-----BEGIN CERTIFICATE-----\n...',
-      // ca: '-----BEGIN CERTIFICATE-----\n...'
-    },
-    session: {
-      secret: 'secret',
-      expires: 60, // minutes
-      sources: [
-        { field: 'token', type: 'cookies' },
-        { field: 'authorization', type: 'headers' },
-        { field: 'token', type: 'query' }
-      ]
-    },
-    cors: {
-      origin: true
-    },
-    compression: {},
-    // statics: {
-    //   dir: '/path/to/dir',
-    //   expires: 60 // minutes
-    // }
     routes
   },
   mongo: {

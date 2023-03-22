@@ -6,7 +6,7 @@ export default [
     operator: 'read',
     cache: {
       key: 'req.params.id',
-      expires: 60 * 60
+      expires: 60 * 60 // seconds
     },
     filter: 'req.query.filter',
     select: 'req.query.select',
