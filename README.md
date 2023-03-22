@@ -1,14 +1,12 @@
 # anyend
 
-Software server infrastructure.
+Platform to speed up backend creation.
 
 ## Run the server
 
 ```sh
 npm start
 ```
-
-User and password by default: `admin / changeme`
 
 ## Build for production
 

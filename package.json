@@ -4,6 +4,7 @@
   "description": "Platform to speed up backend creation.",
   "repository": "github:meefik/enyend",
   "license": "AGPL",
+  "main": "./lib/server.mjs",
   "bin": "dist/server.js",
   "pkg": {
     "scripts": "dist/*.js",
@@ -20,13 +21,15 @@
   "files": [
     "dist/*"
   ],
+  "imports": {
+    "#anyend": "./lib/server.mjs"
+  },
   "scripts": {
     "start": "webpack --mode=development",
     "build-app": "webpack --mode=production",
     "build-pkg": "pkg --public --public-packages '*' -o dist/server.bin package.json",
     "build": "npm run build-app && npm run build-pkg",
     "eslint": "eslint src --ext .js --config .eslintrc.json --fix",
-    "stylelint": "stylelint src/**/*.css --config .stylelintrc.json --fix",
     "test": "node tests/index.mjs"
   },
   "dependencies": {
@@ -38,7 +41,6 @@
     "minio": "^7.0.32",
     "mongoose": "^7.0.1",
     "morgan": "^1.10.0",
-    "nconf": "^0.12.0",
     "winston": "^3.8.2"
   },
   "devDependencies": {
@@ -46,8 +48,6 @@
     "@babel/eslint-parser": "^7.19.1",
     "@babel/preset-env": "^7.20.2",
     "babel-loader": "^9.1.2",
-    "css-loader": "^6.7.3",
-    "cssnano": "^5.1.15",
     "eslint": "^8.35.0",
     "eslint-config-standard": "^17.0.0",
     "eslint-plugin-import": "^2.27.5",
@@ -56,29 +56,13 @@
     "eslint-plugin-promise": "^6.1.1",
     "eslint-scope": "^7.1.1",
     "eslint-visitor-keys": "^3.3.0",
-    "html-webpack-plugin": "^5.5.0",
-    "mini-css-extract-plugin": "^2.7.2",
     "nodemon-webpack-plugin": "^4.8.1",
     "pkg": "^5.8.0",
-    "postcss": "^8.4.21",
-    "postcss-loader": "^7.0.2",
-    "postcss-preset-env": "^8.0.1",
-    "style-loader": "^3.3.1",
-    "stylelint": "^15.2.0",
-    "stylelint-config-standard": "^30.0.1",
     "terser-webpack-plugin": "^5.3.6",
     "webpack": "^5.75.0",
     "webpack-cli": "^5.0.1"
   },
   "engines": {
-    "node": ">= 18",
-    "npm": ">= 8"
-  },
-  "browserslist": [
-    "chrome >= 49",
-    "firefox >= 52",
-    "safari >= 11",
-    "opera >= 36",
-    "edge >= 79"
-  ]
+    "node": ">= 18"
+  }
 }
