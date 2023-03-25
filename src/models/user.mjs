@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import db from 'mongoose';
 
 export default {
   schema: {
@@ -24,6 +25,10 @@ export default {
       type: String,
       default: 'guest',
       enum: ['guest', 'admin']
+    },
+    image: {
+      type: db.Types.ObjectId,
+      ref: 'Attach'
     }
   },
   virtuals: {
@@ -57,6 +62,27 @@ export default {
         username
       }).select('+hash +salt').exec();
       if (user?.validPassword(password)) return user;
+    }
+  },
+  hooks: {
+    pre: {
+      init () {
+        console.log('init');
+        this._image = this.image;
+      },
+      async save (next) {
+        console.log('presave', next);
+        if (String(this._image) !== String(this.image)) {
+          await this.model('Attach').setAttachedFlag(this.image, true);
+          await this.model('Attach').setAttachedFlag(this._image, false);
+        }
+        next();
+      },
+      async remove (next) {
+        console.log('preremove', next);
+        await this.model('Attach').setAttachedFlag(this.image, false);
+        next();
+      }
     }
   },
   events: {

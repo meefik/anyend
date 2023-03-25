@@ -1,6 +1,7 @@
 import user from './user.mjs';
 import login from './login.mjs';
 import state from './state.mjs';
+import storage from './storage.mjs';
 
 export default [
   (req, res, next) => {
@@ -11,7 +12,7 @@ export default [
     timeout: 60,
     cors: { origin: true },
     compression: {},
-    uploads: { multiples: true },
+    // uploads: { multiples: true },
     statics: {
       dir: '/tmp',
       expires: 60 // minutes
@@ -27,19 +28,20 @@ export default [
     }
   },
   {
-    path: '/api',
-    middleware: [
-      ...user,
-      ...login,
-      ...state
-    ]
-  },
-  {
     path: '/restrict',
     method: 'get',
     roles: ['guest', 'admin'],
     middleware (req, res) {
       res.send('OK');
     }
+  },
+  {
+    path: '/api',
+    middleware: [
+      ...user,
+      ...login,
+      ...state,
+      ...storage
+    ]
   }
 ];
