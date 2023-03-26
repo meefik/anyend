@@ -1,13 +1,11 @@
 export default {
   schema: {
     name: {
+      type: String,
+      unique: true
+    },
+    lastModifiedBy: {
       type: String
-    },
-    single: {
-      type: Boolean
-    },
-    unique: {
-      type: Boolean
     },
     nextRunAt: {
       type: Date
@@ -15,10 +13,13 @@ export default {
     lastRunAt: {
       type: Date
     },
-    lockedAt: {
+    lockedUntil: {
       type: Date
     },
     repeatInterval: {
+      type: Number
+    },
+    lockLifetime: {
       type: Number
     },
     failedAt: {
@@ -29,10 +30,6 @@ export default {
     },
     failCount: {
       type: Number
-    },
-    lockLifetime: {
-      type: Number
-    },
-    data: {}
+    }
   }
 };

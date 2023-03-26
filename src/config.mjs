@@ -2,6 +2,7 @@ import os from 'node:os';
 import process from 'node:process';
 import models from './models/index.mjs';
 import routes from './routes/index.mjs';
+import tasks from './tasks/index.mjs';
 
 const {
   HOST,
@@ -12,12 +13,14 @@ const {
 export default {
   cluster: {
     threads: THREADS, // cores
-    timeout: 10 // seconds
+    timeout: 10, // seconds
+    plugins: ['lifecycle', 'mongo', 'minio', 'api', 'scheduler']
   },
   api: {
     host: HOST,
     port: PORT || 3000,
-    routes
+    routes,
+    wss: {}
   },
   mongo: {
     uri: 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin',
@@ -33,5 +36,9 @@ export default {
     async shutdown () {
       console.log('shutdown event');
     }
+  },
+  scheduler: {
+    interval: 60,
+    tasks
   }
 };
