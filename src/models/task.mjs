@@ -4,9 +4,6 @@ export default {
       type: String,
       unique: true
     },
-    lastModifiedBy: {
-      type: String
-    },
     nextRunAt: {
       type: Date
     },
@@ -29,7 +26,8 @@ export default {
       type: String
     },
     failCount: {
-      type: Number
+      type: Number,
+      default: 0
     }
   }
 };

@@ -1,25 +1,35 @@
+import fs from 'node:fs';
+
 export default [
   {
     path: '/storage',
     method: 'post',
     uploads: { multiples: true },
     async middleware (req, res, next) {
+      if (!req.files) {
+        res.status(401);
+        next(new Error('Bad request'));
+      }
       const file = req.files.upload;
-      const { mongo, minio } = global;
-      const Attach = mongo.model('Attach');
+      const { db, getMinioClient, defaultBucket } = global.context;
+      const minio = getMinioClient();
+      const Attach = db.model('Attach');
       const attach = new Attach({
         filename: file.originalFilename,
         mimetype: file.mimetype,
         size: file.size
       });
+      let stream;
       try {
-        await minio.fPutObject(minio.defaultBucket, attach.id, file.filepath);
+        stream = fs.createReadStream(file.filepath);
+        await minio.putObject(defaultBucket, attach.id, file.filepath);
         // await minio.setObjectTagging(minio.defaultBucket, attach.id, { attached: 0 });
         await attach.save();
-        res.json({
-          attach
-        });
+        res.json(attach);
+      } catch (err) {
+        next(err);
       } finally {
+        if (stream) stream.destroy();
         file.destroy();
       }
     }
@@ -28,8 +38,9 @@ export default [
     path: '/storage/:id',
     method: 'get',
     async middleware (req, res, next) {
-      const { mongo, minio } = global;
-      const attach = await mongo.model('Attach').findById(req.params.id);
+      const { db, getMinioClient, defaultBucket } = global.context;
+      const minio = getMinioClient();
+      const attach = await db.model('Attach').findById(req.params.id);
       if (req.query.download) {
         res.header(
           'Content-Disposition',
@@ -49,11 +60,11 @@ export default [
             const length = parseInt(lastBytePos) - parseInt(firstBytePos) + 1;
             res.header('Content-Length', length);
             res.header('Content-Range', `bytes ${firstBytePos}-${lastBytePos}/${attach.size}`);
+            stream = await minio.getPartialObject(defaultBucket, attach.id, parseInt(firstBytePos), length);
             res.status(206);
-            stream = await minio.getPartialObject(minio.defaultBucket, attach.id, parseInt(firstBytePos), length);
           }
         } else {
-          stream = await minio.getObject(minio.defaultBucket, attach.id);
+          stream = await minio.getObject(defaultBucket, attach.id);
         }
         stream.pipe(res);
       } else {

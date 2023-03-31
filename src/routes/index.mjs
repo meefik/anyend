@@ -14,7 +14,7 @@ export default [
     compression: {},
     // uploads: { multiples: true },
     statics: {
-      dir: '/home/meefik/Repositories/anyend/src/public',
+      dir: './src/public',
       expires: 60 // minutes
     },
     session: {

@@ -26,7 +26,7 @@ export default {
       default: 'guest',
       enum: ['guest', 'admin']
     },
-    image: {
+    file: {
       type: db.Types.ObjectId,
       ref: 'Attach'
     }
@@ -65,25 +65,18 @@ export default {
     }
   },
   hooks: {
-    pre: {
+    post: [{
       init () {
-        console.log('init');
-        this._image = this.image;
-      },
+        console.log('custom post.init');
+      }
+    }],
+    pre: [{
+      options: {},
       async save (next) {
-        console.log('presave', next);
-        if (String(this._image) !== String(this.image)) {
-          await this.model('Attach').setAttachedFlag(this.image, true);
-          await this.model('Attach').setAttachedFlag(this._image, false);
-        }
-        next();
-      },
-      async remove (next) {
-        console.log('preremove', next);
-        await this.model('Attach').setAttachedFlag(this.image, false);
+        console.log('custom pre.save');
         next();
       }
-    }
+    }]
   },
   events: {
     async load () {
