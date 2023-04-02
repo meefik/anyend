@@ -2,6 +2,19 @@ import fs from 'node:fs';
 
 export default [
   {
+    path: '/file',
+    method: 'post',
+    uploads: { multiples: true },
+    async middleware (req, res, next) {
+      for (const name in req.files) {
+        const file = req.files[name];
+        const data = fs.readFileSync(file.filepath, { encoding: 'utf8' });
+        console.log(JSON.parse(data));
+      }
+      res.json(req.files);
+    }
+  },
+  {
     path: '/storage',
     method: 'post',
     uploads: { multiples: true },
@@ -22,7 +35,7 @@ export default [
       let stream;
       try {
         stream = fs.createReadStream(file.filepath);
-        await minio.putObject(defaultBucket, attach.id, file.filepath);
+        await minio.putObject(defaultBucket, attach.id, stream);
         // await minio.setObjectTagging(minio.defaultBucket, attach.id, { attached: 0 });
         await attach.save();
         res.json(attach);
