@@ -2,10 +2,13 @@ import user from './user.mjs';
 import login from './login.mjs';
 import state from './state.mjs';
 import storage from './storage.mjs';
+import csv from './csv.mjs';
+import file from './file.mjs';
 
 export default [
   (req, res, next) => {
     console.log('middlware 1');
+    console.log(req.body);
     next();
   },
   {
@@ -41,7 +44,9 @@ export default [
       ...user,
       ...login,
       ...state,
-      ...storage
+      ...storage,
+      ...csv,
+      ...file
     ]
   }
 ];

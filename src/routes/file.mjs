@@ -4,7 +4,7 @@ export default [
     path: '/file/:id',
     method: 'get',
     storage: {
-      bucket: 'anyend',
+      bucket: '"anyend"',
       filename: 'req.params.id'
     }
   },
@@ -14,7 +14,7 @@ export default [
     method: 'post',
     uploads: {},
     storage: {
-      bucket: 'anyend',
+      bucket: '"anyend"',
       filename: 'req.params.id',
       data: 'req.files.upload'
     }
