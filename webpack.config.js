@@ -26,7 +26,7 @@ module.exports = function (env, argv) {
       return res;
     }, {}),
     entry: {
-      server: 'server.mjs'
+      server: 'app.mjs'
     },
     output: {
       path: DIST_DIR,

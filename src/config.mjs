@@ -1,5 +1,6 @@
 import os from 'node:os';
 import process from 'node:process';
+import events from './events/index.mjs';
 import models from './models/index.mjs';
 import routes from './routes/index.mjs';
 import tasks from './tasks/index.mjs';
@@ -14,11 +15,12 @@ export default {
   cluster: {
     threads: THREADS, // cores
     timeout: 10, // seconds
-    plugins: ['lifecycle', 'mongo', 'minio', 'api', 'scheduler']
+    plugins: ['lifecycle', 'mongo', 'minio', 'api', 'scheduler'],
+    events
   },
   api: {
     host: HOST,
-    port: PORT || 3000,
+    port: PORT,
     routes,
     wss: {}
   },
@@ -27,15 +29,7 @@ export default {
     models
   },
   minio: {
-    uri: 'http://minioadmin:minioadmin@127.0.0.1:9000/anyend'
-  },
-  lifecycle: {
-    async startup () {
-      console.log('startup event');
-    },
-    async shutdown () {
-      console.log('shutdown event');
-    }
+    uri: 'http://minioadmin:minioadmin@127.0.0.1:9000'
   },
   scheduler: {
     interval: 60,
