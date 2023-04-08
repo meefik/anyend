@@ -1,0 +1,27 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:latest
+    network_mode: bridge
+    ports:
+      - "0.0.0.0:27017:27017/tcp"
+    volumes:
+      - db:/data/db
+      - configdb:/data/configdb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_SECRET:-secret}
+  minio:
+    image: minio/minio:latest
+    network_mode: bridge
+    ports:
+      - "0.0.0.0:9000:9000/tcp"
+    volumes:
+      - storage:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET:-minioadmin}
+volumes:
+  db: {}
+  configdb: {}
+  storage: {}
