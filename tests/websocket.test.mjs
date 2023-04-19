@@ -2,7 +2,7 @@ import assert from 'assert';
 import http from 'http';
 import WebSocket from 'ws';
 import { createWebSocketClient } from './utils.mjs';
-import createWebSocketServer from '../path/to/your/websocket/server/module.mjs';
+import createWebSocketServer from '../lib/api/wss.mjs';
 
 async function testWebSocketServer() {
   let server;
