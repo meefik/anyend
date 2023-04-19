@@ -1,6 +1,6 @@
 import http from 'http';
-import { createWebSocketClient } from './utils';
-import createWebSocketServer from '../path/to/your/websocket/server/module';
+import { createWebSocketClient } from './utils.mjs';
+import createWebSocketServer from '../lib/api/wss.mjs';
 
 describe('WebSocket Server', () => {
   let server;
