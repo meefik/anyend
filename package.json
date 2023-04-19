@@ -30,7 +30,8 @@
     "build-pkg": "pkg --public --public-packages '*' -o dist/server.bin package.json",
     "build": "npm run build-app && npm run build-pkg",
     "eslint": "eslint src --ext .js --config .eslintrc.json --fix",
-    "test": "node tests/index.mjs"
+    "test": "node tests/index.mjs",
+    "test": "node tests/websocket.test.mjs"
   },
   "dependencies": {
     "@root/acme": "^3.1.0",
