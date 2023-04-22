@@ -2,18 +2,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import cluster from 'node:cluster';
 import scheduler from '../lib/scheduler/index.mjs';
-import { calcNextDate } from '../lib/scheduler/index.mjs';
 import mongo from '../lib/mongo/index.mjs';
 import db from 'mongoose';
 import { DateTime } from 'luxon';
 import { setTimeout } from 'node:timers/promises';
-import exp from 'node:constants';
+import cron from 'cron-parser';
 
-// можно проверить:
-//  - корректно ли выполняются задачи
-//  - соблюдается ли timezone
-//  - логгируются ли ошибки
-//  - 
+
 if (cluster.isPrimary) {
   cluster.fork();
 } else {
@@ -25,9 +20,9 @@ if (cluster.isPrimary) {
 
   await mongo.init(mongoOptions);
 
-  describe('sheduler tests', { only: true }, async () => {
+  describe('sheduler tests', async () => {
 
-    describe('calcNextDay() tests', { only: false }, () => {
+    describe('calcNextDay() tests', () => {
 
       describe('{repeat} is string', () => {
 
@@ -108,7 +103,7 @@ if (cluster.isPrimary) {
 
     const { interval, tz, tasks } = schedulerOptions;
 
-    describe('initialization tests', { only: false }, () => {
+    describe('initialization tests', () => {
 
       it('initial insert of tasks', async () => {
 
@@ -195,4 +190,16 @@ if (cluster.isPrimary) {
       });
     });
   });
+}
+
+function calcNextDate(repeat, tz) {
+  const now = new Date();
+  let nextRunAt = null;
+  if (typeof repeat === 'string') {
+    const cronTime = cron.parseExpression(repeat, { tz });
+    nextRunAt = cronTime.next().toDate();
+  } else if (typeof repeat === 'number' && repeat > 0) {
+    nextRunAt = new Date(now.getTime() + repeat * 1000);
+  }
+  return nextRunAt;
 }
