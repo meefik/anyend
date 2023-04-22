@@ -1,0 +1,23 @@
+{
+    "source": {
+        "include": [
+            "lib"
+        ],
+        "exclude": [
+            "node_modules",
+            "shared",
+            "src",
+            "dist",
+            "deploy",
+            "tests"
+        ],
+        "includePattern": ".+\\.(m|c)?js(doc|x)?$",
+        "excludePattern": "(^|\\/|\\\\)_"
+    },
+    "opts": {
+        "destination": "./docs/"
+    },
+    "plugins": [
+        "plugins/markdown"
+    ]
+}
