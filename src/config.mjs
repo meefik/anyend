@@ -15,7 +15,6 @@ export default {
   cluster: {
     threads: THREADS, // cores
     timeout: 10, // seconds
-    plugins: ['mongo', 'minio', 'api', 'scheduler'],
     events
   },
   api: {
