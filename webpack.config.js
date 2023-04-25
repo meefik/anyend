@@ -26,24 +26,15 @@ module.exports = function (env, argv) {
       return res;
     }, {}),
     entry: {
-      server: 'app.mjs'
+      server: './app.mjs'
     },
     output: {
       path: DIST_DIR,
       filename: '[name].js'
     },
-    resolve: {
-      modules: [
-        path.join(__dirname, 'src'),
-        path.join(__dirname, 'node_modules')
-      ]
-    },
-    performance: {
-      hints: false
-    },
     module: {
       rules: [{
-        test: /\.m?js(\?|$)/,
+        test: /\.m?js/,
         exclude: [/node_modules/],
         use: [{
           loader: 'babel-loader',

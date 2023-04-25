@@ -11,6 +11,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_SECRET:-secret}
+    command: --replSet rs0 --keyFile /data/configdb/rs0.key
   minio:
     image: minio/minio:latest
     network_mode: bridge
