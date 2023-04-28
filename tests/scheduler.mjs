@@ -4,7 +4,6 @@ import cluster from 'node:cluster';
 import scheduler from '../lib/scheduler/index.mjs';
 import mongo from '../lib/mongo/index.mjs';
 import db from 'mongoose';
-import cron from 'cron-parser';
 import { setTimeout } from 'node:timers/promises';
 
 
@@ -19,7 +18,7 @@ if (cluster.isPrimary) {
 
   await mongo.init(mongoOptions);
 
-  await describe('sheduler tests', async () => {
+  describe('sheduler tests', async () => {
 
     let schedulerOptions = {
       interval: 10,
@@ -48,9 +47,9 @@ if (cluster.isPrimary) {
       ]
     };
 
-    const { interval, tz, tasks } = schedulerOptions;
+    let { interval, tz, tasks } = schedulerOptions;
 
-    describe('initialization tests', { skip: true }, () => {
+    describe('initialization tests', () => {
 
       it('initial insert of tasks', async () => {
 
@@ -82,7 +81,7 @@ if (cluster.isPrimary) {
 
     describe('tasks execution tests', () => {
 
-      it('updating nextRunAt in DB', { skip: true }, async () => {
+      it('updating nextRunAt in DB', async () => {
 
         await scheduler.init(schedulerOptions);
 
@@ -106,7 +105,7 @@ if (cluster.isPrimary) {
         await scheduler.destroy();
       });
 
-      it('calling the handler of the task', { skip: true }, async () => {
+      it('calling the handler of the task', async () => {
 
         await scheduler.init(schedulerOptions);
 
@@ -134,28 +133,6 @@ if (cluster.isPrimary) {
         assert.equal(actNextRunAt, expNextRunAt);
 
         delete schedulerOptions.tz;
-
-        await scheduler.destroy();
-      });
-
-      it('preservation of serving information in db', { skip: true }, async () => {
-
-        await db.model('Task').deleteOne({ name: tasks[0].name });
-
-        scheduler.init(schedulerOptions);
-
-        const expecServeInfo = {
-          failCount: 1,
-          nextRunAt: new Date(Date.now() + tasks[0].repeat * 1000).toString(),
-          failReason: null,
-          failedAt: null
-        }
-
-        const actServeInfo = await db.model('Task').findOne({ name: tasks[0].name });
-
-        for (const key of Object.keys(expecServeInfo)) {
-          assert.equal(actServeInfo[key], expecServeInfo[key]);
-        }
 
         await scheduler.destroy();
       });
