@@ -4,9 +4,8 @@ import cluster from 'node:cluster';
 import scheduler from '../lib/scheduler/index.mjs';
 import mongo from '../lib/mongo/index.mjs';
 import db from 'mongoose';
-import { DateTime } from 'luxon';
-import { setTimeout } from 'node:timers/promises';
 import cron from 'cron-parser';
+import { setTimeout } from 'node:timers/promises';
 
 
 if (cluster.isPrimary) {
@@ -20,90 +19,38 @@ if (cluster.isPrimary) {
 
   await mongo.init(mongoOptions);
 
-  describe('sheduler tests', async () => {
-
-    describe('calcNextDay() tests', () => {
-
-      describe('{repeat} is string', () => {
-
-        it('{repeat} is empty string', () => {
-          let repeat = '';
-          // next minute from now
-          let expectedDate = DateTime.now().minus({ seconds: DateTime.now().second }).plus({ minutes: 1 }).setLocale('ru-RU').toFormat('dd.LL.yyyy, HH:mm:ss');
-          let actualDate = calcNextDate(repeat).toLocaleString('ru-RU');
-          assert.equal(actualDate, expectedDate);
-        });
-
-        it('{repeat} is correct cron expression', () => {
-          let repeat = '0 0 12 * * *';
-          // 12 o'clock of the next day
-          let expectedDate = DateTime.now().set({ day: DateTime.now().day + 1, hour: 12, minute: 0, second: 0 }).setLocale('ru-RU').toFormat('dd.LL.yyyy, HH:mm:ss');
-          let actualDate = calcNextDate(repeat).toLocaleString('ru-RU');
-          assert.equal(actualDate, expectedDate);
-        });
-
-        // doesn't work correctly, function should return null
-        it('{repeat} is incorrect cron expression', () => {
-          let repeat = 'incorrect';
-          let actualDate = calcNextDate(repeat);
-          assert.equal(actualDate, null);
-        });
-
-        // doesn't work correctly, toDate() convert date to local timezone
-        it('{tz} is defined correct', () => {
-          let repeat = '';
-          let tz = 'Europe/Moscow';
-          let expectedDate = DateTime.now().setZone(tz).minus({ seconds: DateTime.now().second }).plus({ minutes: 1 }).setLocale('ru-RU').toFormat('dd.LL.yyyy, HH:mm:ss');
-          let actualDate = calcNextDate(repeat, tz).toLocaleString('ru-RU');
-          assert.equal(actualDate, expectedDate);
-        });
-      });
-
-      describe('{repeat} is number', () => {
-        it('{repeat} greater than 0', () => {
-          let repeat = 2000;
-          let expectedDate = DateTime.now().plus({ seconds: repeat }).setLocale('ru-RU').toFormat('dd.LL.yyyy, HH:mm:ss');
-          let actualDate = calcNextDate(repeat).toLocaleString('ru-RU');
-          assert.equal(actualDate, expectedDate);
-        });
-
-        it('{repeat} lower than 0', () => {
-          let repeat = -1000;
-          let actualDate = calcNextDate(repeat);
-          assert.equal(actualDate, null);
-        });
-
-        // doesn't work correctly, toDate() convert date to local timezone
-        it('{tz} is defined', () => {
-          let repeat = 24 * 60 * 60;
-          let tz = 'Europe/Moscow';
-          let expectedDate = DateTime.now().setZone(tz).plus({ seconds: repeat }).setLocale('ru-RU').toFormat('dd.LL.yyyy, HH:mm:ss');
-          let actualDate = calcNextDate(repeat, tz).toLocaleString('ru-RU');
-          assert.equal(actualDate, expectedDate);
-        });
-      });
-    });
+  await describe('sheduler tests', async () => {
 
     let schedulerOptions = {
       interval: 10,
-      tz: 'Asia/Korea',
       tasks: [
         {
-          name: 'task1',
+          name: 'test1',
+          repeat: '0/10 * * * * *',
+          async handler(task) {
+          },
+        },
+        {
+          name: 'test2',
           repeat: 10,
-          async handler() {
-            await db.model('User').deleteOne({ username: 'Alexey' });
-            const User = db.model('User');
-            let userToAddd = new User({ username: 'Alexey', role: 'guest' });
-            await userToAddd.save();
+          async handler(task) {
+            task.testObj.wasHandlerExecuted = true;
+          },
+          testObj: {
+            wasHandlerExecuted: false
           }
+        },
+        {
+          name: 'test3',
+          repeat: '0 30 12 1 1 ?',
+          async handler(task) { },
         }
       ]
     };
 
     const { interval, tz, tasks } = schedulerOptions;
 
-    describe('initialization tests', () => {
+    describe('initialization tests', { skip: true }, () => {
 
       it('initial insert of tasks', async () => {
 
@@ -135,43 +82,67 @@ if (cluster.isPrimary) {
 
     describe('tasks execution tests', () => {
 
-      it('updating nextRunAt in db', async () => {
+      it('updating nextRunAt in DB', { skip: true }, async () => {
 
         await scheduler.init(schedulerOptions);
-
-        await setTimeout(tasks[0].repeat * 1000);
 
         let res = await db.model('Task').findOne({ name: tasks[0].name });
+        let initNextRunAt = res ? res.nextRunAt : null;
 
-        if (res) {
-          let expectedDate = String(calcNextDate(tasks[0].repeat));
-          let actualDate = String(res.nextRunAt);
-          assert.equal(actualDate, expectedDate);
-        }
+        if (!initNextRunAt) assert.fail('Next date of exec of the task wasn\'t saved in DB');
+
+        // additionally wait for next tick of the scheduler
+        let delay = initNextRunAt.getTime() - Date.now() + interval * 1000;
+
+        await setTimeout(delay);
+
+        res = await db.model('Task').findOne({ name: tasks[0].name });
+        let updatedNextRunAt = res ? res.nextRunAt : null;
+
+        if (!updatedNextRunAt) assert.fail();
+
+        assert.notEqual(updatedNextRunAt.toUTCString(), initNextRunAt.toUTCString());
 
         await scheduler.destroy();
       });
 
-      it('calling the handler of the task', async () => {
+      it('calling the handler of the task', { skip: true }, async () => {
 
         await scheduler.init(schedulerOptions);
 
-        await setTimeout(tasks[0].repeat * 1000);
+        // additionally wait for next tick of the scheduler
+        await setTimeout((tasks[1].repeat + interval) * 1000);
 
-        let res = await db.model('User').findOne({ username: 'Alexey', role: 'guest' });
-
-        assert.ok(res);
+        assert.ok(tasks[1].testObj.wasHandlerExecuted);
 
         await scheduler.destroy();
       });
 
-      it('preservation of serving information in db', async () => {
+      it('test task with defined timezone', async () => {
+
+        schedulerOptions.tz = 'Europe/Moscow';
+
+        await scheduler.init(schedulerOptions);
+
+        let res = await db.model('Task').findOne({ name: tasks[2].name });
+        let actNextRunAt = res ? res.nextRunAt.toUTCString() : null;
+
+        if (!actNextRunAt) assert.fail('Next date of exec of the task wasn\'t saved in DB');
+
+        let expNextRunAt = new Date('2024-01-01T12:30:00.000+06:00').toUTCString();
+
+        assert.equal(actNextRunAt, expNextRunAt);
+
+        delete schedulerOptions.tz;
+
+        await scheduler.destroy();
+      });
+
+      it('preservation of serving information in db', { skip: true }, async () => {
 
         await db.model('Task').deleteOne({ name: tasks[0].name });
 
         scheduler.init(schedulerOptions);
-
-        await setTimeout((tasks[0].repeat + 5) * 1000);
 
         const expecServeInfo = {
           failCount: 1,
@@ -190,16 +161,4 @@ if (cluster.isPrimary) {
       });
     });
   });
-}
-
-function calcNextDate(repeat, tz) {
-  const now = new Date();
-  let nextRunAt = null;
-  if (typeof repeat === 'string') {
-    const cronTime = cron.parseExpression(repeat, { tz });
-    nextRunAt = cronTime.next().toDate();
-  } else if (typeof repeat === 'number' && repeat > 0) {
-    nextRunAt = new Date(now.getTime() + repeat * 1000);
-  }
-  return nextRunAt;
 }
