@@ -33,5 +33,10 @@ export default {
     interval: 60,
     tasks
   },
-  events
+  events,
+  acme: {
+    maintainerEmail: 'meefik@gmail.com',
+    subscriberEmail: 'meefik@gmail.com',
+    domains: ['meefik.ru', 'www.meefik.ru']
+  }
 };
