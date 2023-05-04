@@ -3,139 +3,197 @@ import assert from 'node:assert';
 import cluster from 'node:cluster';
 import scheduler from '../lib/scheduler/index.mjs';
 import mongo from '../lib/mongo/index.mjs';
-import db from 'mongoose';
-import { setTimeout } from 'node:timers/promises';
 
 
 if (cluster.isPrimary) {
+
   cluster.fork();
+
 } else {
 
-  let mongoOptions = {
+  const mongoOptions = {
     uri: 'mongodb://localhost:27017',
     models: {},
   };
 
   await mongo.init(mongoOptions);
 
-  describe('sheduler tests', async () => {
+  const TESTING_DELAY = 25;
 
-    let schedulerOptions = {
-      interval: 10,
+  const schedulerOptions1 = {
+    interval: 5,
+    tasks: [
+      {
+        name: 'test1',
+        repeat: '0/10 * * * * *',
+        async handler(task) {
+          task.res.execCount++;
+        },
+        res: {
+          execCount: 0,
+        },
+      },
+      {
+        name: 'test2',
+        repeat: 15,
+        async handler(task) {
+          task.res.execCount++;
+        },
+        res: {
+          execCount: 0,
+        },
+      },
+      {
+        name: 'test3',
+        repeat: getTask3CronExp(TESTING_DELAY),
+        async handler(task) {
+          task.res.execCount++;
+        },
+        res: {
+          execCount: 0,
+        },
+      }
+    ]
+  };
+
+  await scheduler.init(schedulerOptions1);
+
+  setTimeout(async () => {
+
+    let { tasks } = schedulerOptions1;
+
+    describe('repetition tests', async () => {
+
+      it('{repeat} is cron-expression', async () => {
+        // test1 should be exexucted every 10 secs -> 2 times
+        if (tasks[0].res.execCount) {
+          assert.equal(tasks[0].res.execCount, 2);
+        } else {
+          assert.fail('Task wasn\'t executed.');
+        }
+      });
+
+      // test2 should be exexucted every 15 secs -> 1 time
+      it('{repeat} is number', async () => {
+        if (tasks[1].res.execCount) {
+          assert.equal(tasks[1].res.execCount, 1);
+        } else {
+          assert.fail('Task wasn\'t executed.');
+        }
+      });
+    });
+
+    describe('timezone applying tests', async () => {
+
+      // should be executed 1 time
+      it('{timezone} is local', () => {
+        if (tasks[2].res.execCount) {
+          assert.equal(tasks[2].res.execCount, 1);
+        } else {
+          assert.fail('Task wasn\'t executed.');
+        }
+      });
+
+    });
+
+    await scheduler.destroy();
+
+    const schedulerOptions2 = {
+      interval: 15,
+      timezone: 'Europe/Moscow',
       tasks: [
         {
           name: 'test1',
-          repeat: '0/10 * * * * *',
+          repeat: 5,
           async handler(task) {
+            task.res.execCount++;
+          },
+          res: {
+            execCount: 0,
           },
         },
         {
           name: 'test2',
-          repeat: 10,
+          repeat: 20,
           async handler(task) {
-            task.testObj.wasHandlerExecuted = true;
+            task.res.execCount++;
           },
-          testObj: {
-            wasHandlerExecuted: false
-          }
+          res: {
+            execCount: 0,
+          },
         },
         {
           name: 'test3',
-          repeat: '0 30 12 1 1 ?',
-          async handler(task) { },
+          repeat: getTask3CronExp(TESTING_DELAY),
+          async handler(task) {
+            task.res.execCount++;
+          },
+          res: {
+            execCount: 0,
+          },
         }
       ]
-    };
+    }
 
-    let { interval, tz, tasks } = schedulerOptions;
+    await scheduler.init(schedulerOptions2);
 
-    describe('initialization tests', () => {
+    setTimeout(async () => {
 
-      it('initial insert of tasks', async () => {
+      let { tasks } = schedulerOptions2;
 
-        await scheduler.init(schedulerOptions);
+      describe('interval tests', async () => {
 
-        let res = await db.model('Task').find({ name: { $in: tasks.map(item => item.name) } });
-
-        if (res) {
-          for (let i = 0; i < tasks.length; i++) {
-            assert.equal(res[i].name, tasks[i].name);
+        // should be executed 1 time
+        it('{interval} greater than {repeat}', async () => {
+          if (tasks[0].res.execCount) {
+            assert.equal(tasks[0].res.execCount, 1);
+          } else {
+            assert.fail('Task wasn\'t executed.');
           }
-        }
+        });
 
-        await scheduler.destroy();
+        // should not be executed
+        it('{interval} lower than {repeat}', async () => {
+          if (!tasks[1].res.execCount) {
+            assert.ok(true);
+          } else {
+            assert.fail('Task was executed.');
+          }
+        });
       });
 
-      it('initial delete of depreceted tasks', async () => {
+      describe('timezone applying tests', async () => {
 
-        await scheduler.init(schedulerOptions);
+        // should not be executed
+        it('{timezone} is not local', () => {
+          if (!tasks[2].res.execCount) {
+            assert.ok(true);
+          } else {
+            assert.fail('Task was executed.');
+          }
+        });
 
-        let res = await db.model('Task').find({ name: { $nin: tasks.map(item => item.name) } });
-
-        assert.equal(res.length, 0);
-
-        await scheduler.destroy();
       });
-    });
+    }, TESTING_DELAY * 1000);
+  }, TESTING_DELAY * 1000);
+}
 
 
-    describe('tasks execution tests', () => {
+// generate cron-expression with exactly setted time that will be executed in {0.8*delay} secs
+function getTask3CronExp(delay) {
 
-      it('updating nextRunAt in DB', async () => {
+  let now = new Date();
+  let year = '*'
+  let month = '*';
+  let date = '*';
+  let hours = now.getHours();
+  let mins = now.getMinutes();
+  let secs = now.getSeconds() + 0.8 * delay;
 
-        await scheduler.init(schedulerOptions);
+  if (secs >= 60) {
+    secs = secs % 60;
+    mins++;
+  }
 
-        let res = await db.model('Task').findOne({ name: tasks[0].name });
-        let initNextRunAt = res ? res.nextRunAt : null;
-
-        if (!initNextRunAt) assert.fail('Next date of exec of the task wasn\'t saved in DB');
-
-        // additionally wait for next tick of the scheduler
-        let delay = initNextRunAt.getTime() - Date.now() + interval * 1000;
-
-        await setTimeout(delay);
-
-        res = await db.model('Task').findOne({ name: tasks[0].name });
-        let updatedNextRunAt = res ? res.nextRunAt : null;
-
-        if (!updatedNextRunAt) assert.fail();
-
-        assert.notEqual(updatedNextRunAt.toUTCString(), initNextRunAt.toUTCString());
-
-        await scheduler.destroy();
-      });
-
-      it('calling the handler of the task', async () => {
-
-        await scheduler.init(schedulerOptions);
-
-        // additionally wait for next tick of the scheduler
-        await setTimeout((tasks[1].repeat + interval) * 1000);
-
-        assert.ok(tasks[1].testObj.wasHandlerExecuted);
-
-        await scheduler.destroy();
-      });
-
-      it('test task with defined timezone', async () => {
-
-        schedulerOptions.tz = 'Europe/Moscow';
-
-        await scheduler.init(schedulerOptions);
-
-        let res = await db.model('Task').findOne({ name: tasks[2].name });
-        let actNextRunAt = res ? res.nextRunAt.toUTCString() : null;
-
-        if (!actNextRunAt) assert.fail('Next date of exec of the task wasn\'t saved in DB');
-
-        let expNextRunAt = new Date('2024-01-01T12:30:00.000+06:00').toUTCString();
-
-        assert.equal(actNextRunAt, expNextRunAt);
-
-        delete schedulerOptions.tz;
-
-        await scheduler.destroy();
-      });
-    });
-  });
+  return secs + ' ' + mins + ' ' + hours + ' ' + date + ' ' + month + ' ' + year;
 }
