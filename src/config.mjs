@@ -14,8 +14,7 @@ const {
 export default {
   cluster: {
     threads: THREADS, // cores
-    timeout: 10, // seconds
-    events
+    timeout: 10 // seconds
   },
   api: {
     host: HOST,
@@ -24,7 +23,7 @@ export default {
     wss: {}
   },
   mongo: {
-    uri: 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin',
+    uri: 'mongodb://admin:secret@127.0.0.1:27017/anyend?authSource=admin&directConnection=true&replicaSet=rs0',
     models
   },
   minio: {
@@ -33,5 +32,6 @@ export default {
   scheduler: {
     interval: 60,
     tasks
-  }
+  },
+  events
 };
