@@ -56,84 +56,94 @@ if (cluster.isPrimary) {
     ]
   };
 
-  await scheduler.init(schedulerOptions1);
+  await new Promise(async (res, rej) => {
 
-  setTimeout(async () => {
+    await scheduler.init(schedulerOptions1);
 
-    let { tasks } = schedulerOptions1;
+    setTimeout(async () => {
 
-    describe('repetition tests', async () => {
+      let { tasks } = schedulerOptions1;
 
-      it('{repeat} is cron-expression', async () => {
-        // test1 should be exexucted every 10 secs -> 2 times
-        if (tasks[0].res.execCount) {
-          assert.equal(tasks[0].res.execCount, 2);
-        } else {
-          assert.fail('Task wasn\'t executed.');
-        }
+      describe('repitition tests', () => {
+
+        it('{repeat} is cron-expression', () => {
+          // test1 should be exexucted every 10 secs -> 2 times
+          if (tasks[0].res.execCount) {
+            assert.equal(tasks[0].res.execCount, 2);
+          } else {
+            assert.fail('Task wasn\'t executed.');
+          }
+        });
+
+        it('{repeat} is number', () => {
+          // test2 should be exexucted every 15 secs -> 1 time
+          if (tasks[1].res.execCount) {
+            assert.equal(tasks[1].res.execCount, 1);
+          } else {
+            assert.fail('Task wasn\'t executed.');
+          }
+        });
       });
 
-      // test2 should be exexucted every 15 secs -> 1 time
-      it('{repeat} is number', async () => {
-        if (tasks[1].res.execCount) {
-          assert.equal(tasks[1].res.execCount, 1);
-        } else {
-          assert.fail('Task wasn\'t executed.');
-        }
-      });
-    });
+      describe('timezone applying tests', () => {
 
-    describe('timezone applying tests', async () => {
+        // should be executed 1 time
+        it('{timezone} is local', () => {
+          if (tasks[2].res.execCount) {
+            assert.equal(tasks[2].res.execCount, 1);
+          } else {
+            assert.fail('Task wasn\'t executed.');
+          }
+        });
 
-      // should be executed 1 time
-      it('{timezone} is local', () => {
-        if (tasks[2].res.execCount) {
-          assert.equal(tasks[2].res.execCount, 1);
-        } else {
-          assert.fail('Task wasn\'t executed.');
-        }
       });
 
-    });
+      await scheduler.destroy();
 
-    await scheduler.destroy();
+      res();
 
-    const schedulerOptions2 = {
-      interval: 15,
-      timezone: 'Europe/Moscow',
-      tasks: [
-        {
-          name: 'test1',
-          repeat: 5,
-          async handler(task) {
-            task.res.execCount++;
-          },
-          res: {
-            execCount: 0,
-          },
+    }, TESTING_DELAY * 1000);
+
+  });
+
+  const schedulerOptions2 = {
+    interval: 15,
+    timezone: 'Europe/Moscow',
+    tasks: [
+      {
+        name: 'test1',
+        repeat: 5,
+        async handler(task) {
+          task.res.execCount++;
         },
-        {
-          name: 'test2',
-          repeat: 20,
-          async handler(task) {
-            task.res.execCount++;
-          },
-          res: {
-            execCount: 0,
-          },
+        res: {
+          execCount: 0,
         },
-        {
-          name: 'test3',
-          repeat: getTask3CronExp(TESTING_DELAY),
-          async handler(task) {
-            task.res.execCount++;
-          },
-          res: {
-            execCount: 0,
-          },
-        }
-      ]
-    }
+      },
+      {
+        name: 'test2',
+        repeat: 20,
+        async handler(task) {
+          task.res.execCount++;
+        },
+        res: {
+          execCount: 0,
+        },
+      },
+      {
+        name: 'test3',
+        repeat: getTask3CronExp(TESTING_DELAY),
+        async handler(task) {
+          task.res.execCount++;
+        },
+        res: {
+          execCount: 0,
+        },
+      }
+    ]
+  }
+
+  await new Promise(async (res, rej) => {
 
     await scheduler.init(schedulerOptions2);
 
@@ -141,10 +151,10 @@ if (cluster.isPrimary) {
 
       let { tasks } = schedulerOptions2;
 
-      describe('interval tests', async () => {
+      describe('interval tests', () => {
 
         // should be executed 1 time
-        it('{interval} greater than {repeat}', async () => {
+        it('{interval} greater than {repeat}', () => {
           if (tasks[0].res.execCount) {
             assert.equal(tasks[0].res.execCount, 1);
           } else {
@@ -153,7 +163,7 @@ if (cluster.isPrimary) {
         });
 
         // should not be executed
-        it('{interval} lower than {repeat}', async () => {
+        it('{interval} lower than {repeat}', () => {
           if (!tasks[1].res.execCount) {
             assert.ok(true);
           } else {
@@ -162,7 +172,7 @@ if (cluster.isPrimary) {
         });
       });
 
-      describe('timezone applying tests', async () => {
+      describe('timezone applying tests', () => {
 
         // should not be executed
         it('{timezone} is not local', () => {
@@ -174,8 +184,18 @@ if (cluster.isPrimary) {
         });
 
       });
+
+      await scheduler.destroy();
+
+      res();
+
     }, TESTING_DELAY * 1000);
-  }, TESTING_DELAY * 1000);
+
+  });
+
+  await mongo.destroy();
+
+  cluster.worker.kill('SIGUSR2');
 }
 
 
