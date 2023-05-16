@@ -91,7 +91,7 @@ if (cluster.isPrimary) {
 
         assert.equal(minioClients.length, config.hosts.length);
 
-        for (let key of Object.keys(config)) {
+        for (let key in config) {
             if (key == 'hosts') {
                 for (let host of config.hosts) {
                     assert.ok(
