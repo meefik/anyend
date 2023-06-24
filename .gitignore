@@ -31,3 +31,6 @@ node_modules
 
 # Generated builds
 /dist
+
+# VS Code settings
+.vscode
