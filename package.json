@@ -1,36 +1,16 @@
 {
-  "name": "anyend",
+  "name": "neux-api",
   "version": "0.1.0",
   "description": "Platform to speed up backend creation.",
-  "repository": "github:meefik/enyend",
-  "license": "AGPL",
-  "main": "./lib/server.mjs",
-  "bin": "dist/server.js",
-  "pkg": {
-    "scripts": "dist/*.js",
-    "assets": [
-      "dist/fonts/**/*",
-      "dist/public/**/*",
-      "node_modules/**/*.trie",
-      "node_modules/**/*.mem"
-    ],
-    "targets": [
-      "node18-linux-x64"
-    ]
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/neux-dev/neux-api.git"
   },
-  "files": [
-    "dist/*"
-  ],
-  "imports": {
-    "#anyend": "./lib/server.mjs"
-  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/server.js",
   "scripts": {
-    "start": "webpack --mode=development",
-    "build-app": "webpack --mode=production",
-    "build-pkg": "pkg --public --public-packages '*' -o dist/server.bin package.json",
-    "build": "npm run build-app && npm run build-pkg",
-    "eslint": "eslint src --ext .js --config .eslintrc.json --fix",
-    "test": "node tests/index.mjs"
+    "test": "node tests/index.js"
   },
   "dependencies": {
     "@root/acme": "^3.1.0",
@@ -42,32 +22,20 @@
     "cors": "^2.8.5",
     "cron-parser": "^4.8.1",
     "express": "^4.18.2",
-    "formidable": "^2.1.1",
-    "jsonwebtoken": "^9.0.0",
-    "minio": "^7.0.33",
-    "mongoose": "^7.0.3",
+    "formidable": "^3.5.0",
+    "jsonwebtoken": "^9.0.1",
+    "minio": "^7.1.1",
+    "mongoose": "^7.3.4",
     "morgan": "^1.10.0",
-    "winston": "^3.8.2",
+    "winston": "^3.10.0",
     "ws": "^8.13.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.21.4",
-    "@babel/eslint-parser": "^7.21.3",
-    "@babel/preset-env": "^7.21.4",
-    "babel-loader": "^9.1.2",
-    "eslint": "^8.37.0",
-    "eslint-config-standard": "^17.0.0",
+    "eslint": "^8.44.0",
+    "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-n": "^15.7.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^6.1.1",
-    "eslint-scope": "^7.1.1",
-    "eslint-visitor-keys": "^3.4.0",
-    "nodemon-webpack-plugin": "^4.8.1",
-    "pkg": "^5.8.1",
-    "terser-webpack-plugin": "^5.3.7",
-    "webpack": "^5.78.0",
-    "webpack-cli": "^5.0.1"
+    "eslint-plugin-n": "^16.0.1",
+    "eslint-plugin-promise": "^6.1.1"
   },
   "engines": {
     "node": ">= 18"
