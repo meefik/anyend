@@ -1,6 +1,6 @@
 # AnyEnd
 
-Platform to speed up backend creation.
+Platform to speed up backend creation. Implementation of a declarative approach to backend development.
 
 ## To do
 
@@ -36,6 +36,7 @@ RESTful API:
 - [x] Role-based access control
 - [ ] Request rate limit
 - [x] WebSockets
+- [x] RPC
 - [ ] RSS
 - [ ] iCalendar
 - [ ] PDF
