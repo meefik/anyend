@@ -5,7 +5,7 @@ import parseUri from '../utils/uri-parser.js';
 
 const minioClients = [];
 
-export async function init (options) {
+export async function init(options) {
   const minioOptions = parseUri(options.uri);
   const hosts = minioOptions.hosts || [];
   const timeout = minioOptions.options?.timeout || 60000;
@@ -22,7 +22,7 @@ export async function init (options) {
       sessionToken: minioOptions.options?.sessionToken,
       partSize: minioOptions.options?.partSize,
       transport: {
-        request (options, cb) {
+        request(options, cb) {
           const req = transport.request(options, cb);
           req.setTimeout(timeout);
           req.once('timeout', function () {
@@ -36,7 +36,7 @@ export async function init (options) {
   }
 }
 
-export function context () {
+export function context() {
   return minioClients[~~(Math.random() * minioClients.length)];
 }
 

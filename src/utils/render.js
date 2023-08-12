@@ -4,7 +4,7 @@
  * @param {*} tpl Converted data (templates).
  * @param {Object} data Data for substitution in the template.
  */
-async function deepRender (tpl, data) {
+async function deepRender(tpl, data) {
   if (data === null || typeof data !== 'object') data = {};
   if (typeof data.toJSON === 'function') data = data.toJSON();
   let out = tpl;

@@ -1,22 +1,23 @@
 import user from './user.js';
 import login from './login.js';
 import state from './state.js';
-import storage from './storage.js';
 import csv from './csv.js';
 import file from './file.js';
 import rpc from './rpc.js';
+import timeout from './timeout.js';
+
+export const DEFAULT_TIMEOUT = 15;
+export const CORS = 'www.neux.dev';
 
 export default [
   (req, res, next) => {
-    console.log('middlware 1');
-    console.log(req.body);
+    res.cookie('cookie-test', 'ok');
     next();
   },
   {
-    timeout: 60,
-    cors: { origin: true },
+    timeout: DEFAULT_TIMEOUT,
+    cors: { origin: CORS },
     compression: {},
-    // uploads: { multiples: true },
     statics: {
       dir: './src/public',
       expires: 60 // minutes
@@ -35,7 +36,7 @@ export default [
     path: '/restrict',
     method: 'get',
     roles: ['guest', 'admin'],
-    middleware (req, res) {
+    middleware(req, res) {
       res.send('OK');
     }
   },
@@ -45,10 +46,10 @@ export default [
       ...user,
       ...login,
       ...state,
-      ...storage,
       ...csv,
       ...file,
-      ...rpc
+      ...rpc,
+      ...timeout
     ]
   }
 ];

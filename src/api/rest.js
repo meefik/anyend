@@ -9,7 +9,7 @@ import dao from '../mongo/dao.js';
 import render from '../utils/render.js';
 import { readCsv, writeCsv } from '../utils/csv.js';
 
-function setupRouter (_routes) {
+function setupRouter(_routes) {
   const db = mongo.context();
   const router = express.Router();
   [].concat(_routes || []).forEach((route) => {
@@ -89,10 +89,10 @@ function setupRouter (_routes) {
         Object.defineProperty(req, 'user', {
           enumerable: true,
           configurable: false,
-          async get () {
+          async get() {
             return payload;
           },
-          async set (val) {
+          async set(val) {
             try {
               if (!val) {
                 payload = null;
@@ -111,10 +111,10 @@ function setupRouter (_routes) {
         Object.defineProperty(req, 'token', {
           enumerable: true,
           configurable: false,
-          async get () {
+          async get() {
             return token;
           },
-          async set (val) {
+          async set(val) {
             try {
               if (!val) {
                 payload = null;
@@ -132,13 +132,13 @@ function setupRouter (_routes) {
         Object.defineProperty(req, 'session', {
           enumerable: true,
           configurable: false,
-          async get () {
+          async get() {
             if (req.user?.sid && !session) {
               session = await db?.model('Session')?.findById(req.user?.sid).exec();
             }
             return session;
           },
-          async set (val) {
+          async set(val) {
             if (req.user?.sid && val !== session) {
               await db?.model('Session')?.updateOne({ _id: req.user?.sid }, { $set: { data: val } });
               session = val;
@@ -186,8 +186,7 @@ function setupRouter (_routes) {
       const fn = async function (req, res, next) {
         let stream;
         try {
-          const { getMinioClient } = global.context;
-          const minio = getMinioClient();
+          const minio = global.context.minio;
           const params = await render(
             { bucket, filename, data },
             { req, res }
@@ -196,12 +195,13 @@ function setupRouter (_routes) {
             if (!params.data) {
               throw Error('File not included');
             }
-            const { filepath } = params.data;
+            // data consists of PersistentFile array
+            const { filepath } = params.data[0];
             stream = fs.createReadStream(filepath);
-            await minio.putObject(bucket, filename, stream);
-            res.json(params.data);
+            await minio.putObject(params.bucket, params.filename, stream)
+            res.json(params.data[0]);
           } else {
-            const { size } = await minio.statObject(bucket, filename) || {};
+            const { size } = await minio.statObject(params.bucket, params.filename) || {};
             if (!size) {
               throw Error('File not found');
             }
@@ -216,7 +216,7 @@ function setupRouter (_routes) {
               } = String(req.headers.range).match(/(bytes)=([0-9]+)?-([0-9]+)?/) || [];
               if (bytesUnit === 'bytes') {
                 const length = parseInt(lastBytePos) - parseInt(firstBytePos) + 1;
-                out = await minio.getPartialObject(bucket, filename, parseInt(firstBytePos), length);
+                out = await minio.getPartialObject(params.bucket, params.filename, parseInt(firstBytePos), length);
                 res.header('Content-Length', length);
                 res.header('Content-Range', `bytes ${firstBytePos}-${lastBytePos}/${size}`);
                 res.status(206);
@@ -225,7 +225,7 @@ function setupRouter (_routes) {
               }
             } else {
               res.header('Content-Length', size);
-              out = await minio.getObject(bucket, filename);
+              out = await minio.getObject(params.bucket, params.filename);
             }
             out.pipe(res);
           }
@@ -234,7 +234,8 @@ function setupRouter (_routes) {
         } finally {
           if (stream) stream.destroy();
           for (const k in req.files) {
-            req.files[k].destroy();
+            for (const PF of req.files[k])
+              PF.destroy();
           }
         }
       };

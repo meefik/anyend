@@ -10,11 +10,11 @@ const dao = {
    * @param {Object|Object[]} [query.data] Данные для внесения в БД.
    * @returns {Promise}
    */
-  async create (model, query) {
+  async create(model, query) {
     const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { populate, data } = query;
-    if (data.id) {
+    if (data?.id) {
       data._id = data.id;
       delete data.id;
     }
@@ -56,7 +56,7 @@ const dao = {
    * @param {boolean} [query.cursor] Вернуть курсор.
    * @returns {Promise}
    */
-  async read (model, query) {
+  async read(model, query) {
     const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let {
@@ -136,7 +136,7 @@ const dao = {
    * @param {Object} [query.data] Данные для внесения в БД.
    * @returns {Promise}
    */
-  async update (model, query) {
+  async update(model, query) {
     const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { filter, upsert, select, populate, one, data } = query;
@@ -160,6 +160,8 @@ const dao = {
     if (select) transaction.select(select);
     if (populate) transaction.populate(populate);
     const docs = await transaction.exec();
+    // data in row form -> should be parsed
+    data = JSON.parse(data);
     const updateDoc = async (doc, data) => {
       if (doc) {
         for (const p in data) {
@@ -205,7 +207,7 @@ const dao = {
    * @param {Object} [query.populate] Связь с другими моделями.
    * @returns {Promise}
    */
-  async delete (model, query) {
+  async delete(model, query) {
     const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     let { filter, select, populate } = query;
@@ -239,7 +241,7 @@ const dao = {
    * @param {Object} options
    * @returns {Promise}
    */
-  async sync (model, options) {
+  async sync(model, options) {
     const Model = db.model(model);
     if (!Model) throw new ModelError('Model not found');
     const { add, mod, del, query } = options;
@@ -268,7 +270,7 @@ const dao = {
   }
 };
 
-function setValue (path, val, doc) {
+function setValue(path, val, doc) {
   if (!path || !doc) return doc;
   const arr = path.split('.');
   arr.reduce((o, k, i) => {
@@ -284,7 +286,7 @@ function setValue (path, val, doc) {
 }
 
 class ModelError extends Error {
-  constructor (message) {
+  constructor(message) {
     super(message);
     this.message = message;
     this.name = 'ModelError';

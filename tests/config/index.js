@@ -1,12 +1,10 @@
 import os from 'node:os';
 import process from 'node:process';
-import events from './events/index.js';
 import models from './models/index.js';
 import routes from './routes/index.js';
-import tasks from './tasks/index.js';
 
 const {
-    HOST,
+    HOST = 'localhost',
     PORT = 3000,
     THREADS = os.cpus().length
 } = process.env;
@@ -28,15 +26,5 @@ export default {
     },
     minio: {
         uri: 'http://minioadmin:minioadmin@127.0.0.1:9000'
-    },
-    scheduler: {
-        interval: 60,
-        tasks
-    },
-    events,
-    acme: {
-        maintainerEmail: 'admin@neux.dev',
-        subscriberEmail: 'admin@neux.dev',
-        domains: ['neux.dev', 'www.neux.dev']
     }
 };

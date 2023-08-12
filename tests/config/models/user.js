@@ -3,18 +3,24 @@ export default {
     role: {
       type: String,
       default: 'guest',
-      enum: ['guest', 'customer', 'admin']
+      enum: ['guest', 'cutsomer', 'admin']
+    },
+    first_name: {
+      type: String
+    },
+    last_name: {
+      type: String
     }
   },
   hooks: {
     post: [{
-      init () {
+      init() {
         console.log('custom post.init');
       }
     }],
     pre: [{
       options: {},
-      async save (next) {
+      async save(next) {
         console.log('custom pre.save');
         next();
       }

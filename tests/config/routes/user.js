@@ -5,30 +5,30 @@ export default [
     dao: {
       schema: 'User',
       operator: 'read',
-      filter: (req) => req.query.filter,
-      select: (req) => req.query.select,
-      sort: (req) => req.query.sort,
-      populate: (req) => req.query.populate,
+      filter: (data) => data.req.query.filter,
+      select: (data) => data.req.query.select,
+      sort: (data) => data.req.query.sort,
+      populate: (data) => data.req.query.populate,
       count: true,
-      skip: (req) => req.query.skip,
-      limit: (req) => req.query.limit
+      skip: (data) => data.req.query.skip,
+      limit: (data) => data.req.query.limit
     }
   },
   {
     method: 'get',
     path: '/user/:id',
     cache: {
-      key: (req) => req.params.id,
+      key: (data) => data.req.params.id,
       expires: 60 // seconds
     },
     dao: {
       schema: 'User',
       operator: 'read',
       filter: {
-        id: (req) => req.params.id
+        id: (data) => data.req.params.id
       },
-      select: (req) => req.query.select,
-      populate: (req) => req.query.populate,
+      select: (data) => data.req.query.select,
+      populate: (data) => data.req.query.populate,
       one: true
     }
   },
@@ -38,8 +38,8 @@ export default [
     dao: {
       schema: 'User',
       operator: 'create',
-      populate: (req) => req.query.populate,
-      data: (req) => req.body
+      populate: (data) => data.req.query.populate,
+      data: (data) => data.req.body
     }
   },
   {
@@ -49,11 +49,11 @@ export default [
       schema: 'User',
       operator: 'update',
       filter: {
-        id: (req) => req.params.id
+        id: (data) => data.req.params.id
       },
-      select: (req) => req.query.select,
-      populate: (req) => req.query.populate,
-      data: (req) => req.body,
+      select: (data) => data.req.query.select,
+      populate: (data) => data.req.query.populate,
+      data: (data) => data.req.body,
       upsert: false
     }
   },
@@ -64,10 +64,10 @@ export default [
       schema: 'User',
       operator: 'delete',
       filter: {
-        id: (req) => req.params.id
+        id: (data) => data.req.params.id
       },
-      select: (req) => req.query.select,
-      populate: (req) => req.query.populate
+      select: (data) => data.req.query.select,
+      populate: (data) => data.req.query.populate
     }
   }
 ];
